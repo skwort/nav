@@ -9,6 +9,7 @@
  */
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
@@ -30,6 +31,7 @@ enum commands {
     CMD_REGISTER = 0,
     CMD_UNREGISTER,
     CMD_ADD,
+    CMD_DELETE,
     CMD_NUM 
 };
 
@@ -37,6 +39,7 @@ enum commands {
 static void cmd_register(int pid, char *args);
 static void cmd_unregister(int pid, char *args);
 static void cmd_add(int pid, char *args);
+static void cmd_delete(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -175,6 +178,38 @@ static int get_trailing_whitespace(char *s)
     return i;
 }
 
+/** Make sure the caller exists */
+static bool shell_exists(struct state *state, int pid)
+{
+    struct node *shell_node;
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d not registered", pid);
+        return false;
+    }
+
+    return true;
+}
+
+/** Validate a tag path to ensure it exists */
+static bool valid_path(char *path)
+{
+    struct stat sb;
+    int err;
+
+    err = fstatat(0, path, &sb, 0);
+    if (err && errno == ENOENT) {
+        LOG_ERR("Path '%s' does not exist.", path);
+        return false;
+    } else if (err) {
+        LOG_ERR("Bad path %s", path);
+        return false;
+    }
+
+    return true;
+}
+
 static void cmd_add(int pid, char *args)
 {
     char *line = NULL, *token = NULL, *tag = NULL, *path = NULL;
@@ -182,19 +217,13 @@ static void cmd_add(int pid, char *args)
     int err;
     int j;
     struct state *state;
-    struct node *shell_node;
-    struct stat sb;
     struct node *tag_node;
     struct tag *tag_data;
 
     state = get_state();
 
-    /* Make sure the caller exists */
-    shell_node = list_get_node(&state->shells, &pid);
-    if (shell_node == NULL) {
-        LOG_ERR("shell %d not registered", pid);
+    if (!shell_exists(state, pid))
         return;
-    }
 
     /* Extract args */
     for (j = 1, line = args; ; j++, line = NULL) {
@@ -217,13 +246,7 @@ static void cmd_add(int pid, char *args)
         goto freeargs;
     }
 
-    /* Validate path */
-    err = fstatat(0, path, &sb, 0);
-    if (err && errno == ENOENT) {
-        LOG_ERR("Path '%s' does not exist.", path);
-        goto freeargs;
-    } else if (err) {
-        LOG_ERR("Bad path %s", path);
+    if (!valid_path(path)) {
         goto freeargs;
     }
 
@@ -254,7 +277,7 @@ static void cmd_add(int pid, char *args)
     list_append_node(&state->tags, tag_node);
 
 end:
-    LOG_INF("tag %s->%s added.", tag, path);
+    LOG_INF("Tag %s->%s added.", tag, path);
     return;
 
 freeargs:
