@@ -123,7 +123,6 @@ void loop(struct state *state)
 
             dispatch_command(cmd_str, pid, args);
         }
-        sleep(1);
     }
 }
 
