@@ -57,6 +57,7 @@ const struct command cmd_table[] = {
     {"register", cmd_register},
     {"unregister", cmd_unregister},
     {"add", cmd_add},
+    {"delete", cmd_delete},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -162,7 +163,7 @@ static void cmd_unregister(int pid, char *args)
 }
 
 
-
+/** Get the index of the first trailing whitespace in a string */
 static int get_trailing_whitespace(char *s)
 {
     int i = 0;
@@ -214,7 +215,6 @@ static void cmd_add(int pid, char *args)
 {
     char *line = NULL, *token = NULL, *tag = NULL, *path = NULL;
     char *saveptr = NULL;
-    int err;
     int j;
     struct state *state;
     struct node *tag_node;
@@ -283,5 +283,41 @@ end:
 freeargs:
     free(tag);
     free(path);
+    return;
+}
+
+static void cmd_delete(int pid, char *args)
+{
+    char *line = NULL, *token = NULL, *tag = NULL;
+    char *saveptr = NULL;
+    struct state *state;
+    struct node *tag_node;
+
+    state = get_state();
+
+    if (!shell_exists(state, pid))
+        return;
+
+    line = args;
+    token = strtok_r(line, " ", &saveptr);
+    if (token == NULL) {
+        LOG_ERR("Too few tokens");
+        return;
+    }
+
+    tag = strndup(token, get_trailing_whitespace(token));
+
+   /* Check if tag exists */
+    tag_node = list_get_node(&state->tags, tag);
+    if (tag_node == NULL) {
+        LOG_INF("Tag '%s' does not exist.", tag);
+        goto end;
+    }
+
+    list_delete_node(&state->tags, tag);
+    LOG_INF("Tag %s deleted.", tag);
+
+end:
+    free(tag);
     return;
 }
