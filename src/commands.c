@@ -32,6 +32,7 @@ enum commands {
     CMD_UNREGISTER,
     CMD_ADD,
     CMD_DELETE,
+    CMD_SHOW,
     CMD_NUM 
 };
 
@@ -40,6 +41,7 @@ static void cmd_register(int pid, char *args);
 static void cmd_unregister(int pid, char *args);
 static void cmd_add(int pid, char *args);
 static void cmd_delete(int pid, char *args);
+static void cmd_show(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -58,6 +60,7 @@ const struct command cmd_table[] = {
     {"unregister", cmd_unregister},
     {"add", cmd_add},
     {"delete", cmd_delete},
+    {"show", cmd_show},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -124,7 +127,8 @@ static void cmd_register(int pid, char *args)
 
     /* Send registration message */
     snprintf(buf, 100, "%d register OK\n", pid);
-    sendto(state->sfd, buf, 100, 0, (struct sockaddr *)&shell_data->sock_addr,
+    sendto(state->sfd, buf, 100, 0,
+           (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
 
     LOG_INF("shell %d registered", pid);
@@ -180,17 +184,17 @@ static int get_trailing_whitespace(char *s)
 }
 
 /** Make sure the caller exists */
-static bool shell_exists(struct state *state, int pid)
+static struct node *shell_exists(struct state *state, int pid)
 {
     struct node *shell_node;
 
     shell_node = list_get_node(&state->shells, &pid);
     if (shell_node == NULL) {
         LOG_ERR("shell %d not registered", pid);
-        return false;
+        return NULL;
     }
 
-    return true;
+    return shell_node;
 }
 
 /** Validate a tag path to ensure it exists */
@@ -277,7 +281,7 @@ static void cmd_add(int pid, char *args)
     list_append_node(&state->tags, tag_node);
 
 end:
-    LOG_INF("Tag %s->%s added.", tag, path);
+    LOG_INF("Tag %s --> %s added.", tag, path);
     return;
 
 freeargs:
@@ -315,9 +319,41 @@ static void cmd_delete(int pid, char *args)
     }
 
     list_delete_node(&state->tags, tag);
-    LOG_INF("Tag %s deleted.", tag);
+    LOG_INF("Tag '%s' deleted.", tag);
 
 end:
     free(tag);
     return;
+}
+
+static void cmd_show(int pid, char *args)
+{
+    struct state *state;
+    struct node *tag_node;
+    struct node *shell_node;
+    struct shell *shell_data;
+    struct tag *tag_data;
+    char buf[1024] = {0};
+    int offset = 0;
+    
+    state = get_state();
+
+    shell_node = shell_exists(state, pid);
+    if (!shell_node)
+        return;
+
+    shell_data = (struct shell *)shell_node->data;
+
+    tag_node = state->tags.head;
+    while (tag_node != NULL) {
+        tag_data = (struct tag *)tag_node->data;
+
+        offset += sprintf(buf + offset,  "%s --> %s\n", tag_data->tag,
+                          tag_data->path);
+        tag_node = tag_node->next;
+    }
+
+    sendto(state->sfd, buf, 1024, 0,
+           (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
 }
