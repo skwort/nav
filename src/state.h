@@ -22,6 +22,7 @@ struct state {
     int         sfd;
 
     struct list shells;
+    struct list tags;
 };
 
 /**

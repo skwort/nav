@@ -37,10 +37,17 @@ int init_state(void)
         singleton_state->uname = NULL;
         singleton_state->sfd = -1;
 
+        /* Setup shell list */
         singleton_state->shells.head = NULL;
         singleton_state->shells.n_items = 0;
         singleton_state->shells.compare_func= NULL;
         singleton_state->shells.cleanup_func = NULL;
+
+        /* Setup tag list */
+        singleton_state->tags.head = NULL;
+        singleton_state->tags.n_items = 0;
+        singleton_state->tags.compare_func= NULL;
+        singleton_state->tags.cleanup_func = NULL;
 
         return 0;
     }

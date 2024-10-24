@@ -17,6 +17,7 @@
 #include "list.h"
 #include "state.h"
 #include "shell.h"
+#include "tag.h"
 
 char *get_username(void)
 {
@@ -118,7 +119,7 @@ void loop(struct state *state)
                 continue;
             }
 
-            args = strtok_r(NULL, "", &saveptr); // Remaining args
+            args = strtok_r(NULL, "", &saveptr);
 
             dispatch_command(cmd_str, pid, args);
         }
@@ -144,6 +145,8 @@ int main(int arc, char** argv)
     state = get_state();
     state->shells.compare_func = compare_shell_pid;
     state->shells.cleanup_func = cleanup_shell;
+    state->tags.compare_func = compare_tag_tag;
+    state->tags.cleanup_func = cleanup_tag;
 
     state->uname = get_username();
     if (state->uname == NULL) {

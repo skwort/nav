@@ -11,10 +11,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
+#include <errno.h>
 
+#include "list.h"
 #include "log.h"
 #include "state.h"
 #include "shell.h"
+#include "tag.h"
 
 /**
  * @brief Enum representing the available commands.
@@ -25,12 +29,14 @@
 enum commands {
     CMD_REGISTER = 0,
     CMD_UNREGISTER,
+    CMD_ADD,
     CMD_NUM 
 };
 
 /* Prototypes */
 static void cmd_register(int pid, char *args);
 static void cmd_unregister(int pid, char *args);
+static void cmd_add(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -47,6 +53,7 @@ struct command {
 const struct command cmd_table[] = {
     {"register", cmd_register},
     {"unregister", cmd_unregister},
+    {"add", cmd_add},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -149,4 +156,109 @@ static void cmd_unregister(int pid, char *args)
         return;
     }
     LOG_INF("shell %d unregistered", pid);
+}
+
+
+
+static int get_trailing_whitespace(char *s)
+{
+    int i = 0;
+    char *p = s;
+
+    while (p != NULL) {
+        if (*p == '\n' || *p == ' ')
+            break;
+        i++;
+        p++;
+    }
+
+    return i;
+}
+
+static void cmd_add(int pid, char *args)
+{
+    char *line = NULL, *token = NULL, *tag = NULL, *path = NULL;
+    char *saveptr = NULL;
+    int err;
+    int j;
+    struct state *state;
+    struct node *shell_node;
+    struct stat sb;
+    struct node *tag_node;
+    struct tag *tag_data;
+
+    state = get_state();
+
+    /* Make sure the caller exists */
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d not registered", pid);
+        return;
+    }
+
+    /* Extract args */
+    for (j = 1, line = args; ; j++, line = NULL) {
+        token = strtok_r(line, " ", &saveptr);
+        if (token == NULL)
+            break;
+
+        if (j == 1) {
+            tag = strndup(token, get_trailing_whitespace(token));
+        } else if (j == 2) {
+            path = strndup(token, get_trailing_whitespace(token));
+        } else {
+            LOG_ERR("Too many tokens");
+            goto freeargs;
+        }
+    }
+
+    if (path == NULL) {
+        LOG_ERR("Too few tokens");
+        goto freeargs;
+    }
+
+    /* Validate path */
+    err = fstatat(0, path, &sb, 0);
+    if (err && errno == ENOENT) {
+        LOG_ERR("Path '%s' does not exist.", path);
+        goto freeargs;
+    } else if (err) {
+        LOG_ERR("Bad path %s", path);
+        goto freeargs;
+    }
+
+    /* Check if it already exists */
+    tag_node = list_get_node(&state->tags, tag);
+    if (tag_node != NULL) {
+        LOG_INF("Tag '%s' already exists. Updating.", tag);
+        free(((struct tag *)tag_node->data)->path);
+        ((struct tag *)tag_node->data)->path = path;
+        goto end;
+    }
+
+    /* Create the tag and add it to the list*/
+    if (list_node_create(&tag_node)) {
+        LOG_ERR("tag node create failed");
+        goto freeargs;
+    }
+
+    tag_data = (struct tag*)malloc(sizeof(struct tag));
+    if (tag_data == NULL) {
+        LOG_ERR("tag data malloc create failed");
+        goto freeargs;
+    }
+
+    tag_data->tag = tag;
+    tag_data->path = path;
+    tag_node->data = tag_data;
+    list_append_node(&state->tags, tag_node);
+
+end:
+    LOG_INF("tag %s->%s added.", tag, path);
+    return;
+
+freeargs:
+    free(tag);
+    free(path);
+    return;
 }
