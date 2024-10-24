@@ -91,9 +91,8 @@ struct node *list_get_node(struct list *l, void *key)
 
     /* not first item */
     for (curr = l->head; curr != NULL; curr = curr->next) {
-        if (!l->compare_func(l->head->data, key)) 
+        if (!l->compare_func(curr->data, key))
             return curr;
-
     }
     
     return NULL;
