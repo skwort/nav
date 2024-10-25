@@ -43,6 +43,8 @@ int list_append_node(struct list *l, struct node *n)
 
 int list_delete_node(struct list *l, void *key)
 {
+    struct node *curr, *prev;
+
     /* empty list */
     if (l->head == NULL) {
         return 1;
@@ -50,16 +52,17 @@ int list_delete_node(struct list *l, void *key)
 
     /* first item */
     if (!l->compare_func(l->head->data, key)) {
-        l->cleanup_func(l->head->data);
-        free(l->head);
-        l->head = NULL;
+        curr = l->head;
+        l->cleanup_func(curr->data);
+        l->head = l->head->next;
+        free(curr);
         l->n_items--;
         return 0;
     }
 
     /* not first item */
-    struct node* curr = l->head;
-    struct node* prev = NULL;
+    curr = l->head;
+    prev = NULL;
     for (; curr != NULL; curr = curr->next) {
         if (!l->compare_func(curr->data, key)) {
             if (prev)
