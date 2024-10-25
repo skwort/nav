@@ -14,6 +14,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <sys/un.h>
 
 #include "list.h"
 #include "log.h"
@@ -148,6 +149,8 @@ static void cmd_unregister(int pid, char *args)
 {
     struct state *state;
     struct node *shell_node;
+    struct shell *shell_data;
+    struct sockaddr_un shell_addr;
 
     LOG_INF("shell at PID=%d wants to unregister", pid);
 
@@ -158,12 +161,19 @@ static void cmd_unregister(int pid, char *args)
         LOG_ERR("shell %d does not exist", pid);
         return;
     }
+    shell_data = (struct shell *)shell_node->data;
+
+    memcpy(&shell_addr, &shell_data->sock_addr, sizeof(shell_addr));
 
     if (list_delete_node(&state->shells, &pid)) {
         LOG_ERR("shell node delete failed");
         return;
     }
+
     LOG_INF("shell %d unregistered", pid);
+    sendto(state->sfd, "OK\n", 3, 0,
+           (struct sockaddr *)&shell_addr,
+           sizeof(shell_addr));
 }
 
 
@@ -220,6 +230,7 @@ static void cmd_add(int pid, char *args)
         LOG_ERR("shell %d does not exist", pid);
         return;
     }
+    shell_data = (struct shell *)shell_node->data;
 
     /* Extract args */
     for (j = 1, line = args; ; j++, line = NULL) {
@@ -274,11 +285,18 @@ static void cmd_add(int pid, char *args)
 
 end:
     LOG_INF("Tag %s --> %s added.", tag, path);
+    sendto(state->sfd, "OK\n", 3, 0,
+           (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
     return;
 
 freeargs:
     free(tag);
     free(path);
+
+    sendto(state->sfd, "BAD\n", 4, 0,
+           (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
     return;
 }
 
@@ -298,6 +316,7 @@ static void cmd_delete(int pid, char *args)
         LOG_ERR("shell %d does not exist", pid);
         return;
     }
+    shell_data = (struct shell *)shell_node->data;
 
     line = args;
     token = strtok_r(line, " ", &saveptr);
@@ -312,13 +331,17 @@ static void cmd_delete(int pid, char *args)
     tag_node = list_get_node(&state->tags, tag);
     if (tag_node == NULL) {
         LOG_INF("Tag '%s' does not exist.", tag);
-        goto end;
+        sendto(state->sfd, "BAD\n", 4, 0,
+            (struct sockaddr *)&shell_data->sock_addr,
+            sizeof(shell_data->sock_addr));
+    } else {
+        list_delete_node(&state->tags, tag);
+        LOG_INF("Tag '%s' deleted.", tag);
+        sendto(state->sfd, "OK\n", 3, 0,
+            (struct sockaddr *)&shell_data->sock_addr,
+            sizeof(shell_data->sock_addr));
     }
 
-    list_delete_node(&state->tags, tag);
-    LOG_INF("Tag '%s' deleted.", tag);
-
-end:
     free(tag);
     return;
 }
