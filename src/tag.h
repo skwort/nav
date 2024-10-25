@@ -9,6 +9,8 @@
 #ifndef TAG_H_
 #define TAG_H_
 
+#include "list.h"
+
 struct tag {
     char *tag;
     char *path;
@@ -38,5 +40,35 @@ int compare_tag_tag(void *data, void *key);
  * @return 0 on success.
  */
 int cleanup_tag(void *data);
+
+/**
+ * @brief Reads tag data from a file and populates the provided tag list.
+ *
+ * This function opens the specified file at `path` and reads each line,
+ * expecting a format of "tag=tag_path". It parses each line into tag and path
+ * components, verifies the path, and adds each unique tag-path pair to the
+ * given `tags` list. If a tag already exists, the path is updated instead.
+ *
+ * @param tags Pointer to the `list` structure where parsed tags will be
+ *             stored.
+ * @param path Pointer to the file path to read tags from.
+ * @return 0 on success, 1 if the file cannot be opened or if memory allocation
+ *         fails.
+ */
+int read_tag_file(struct list *tags, char *path);
+
+/**
+ * @brief Writes the provided tag list to a file.
+ *
+ * This function writes each tag-path pair from the `tags` list to the
+ * specified file at `path`, in the format "tag=tag_path". Each entry is
+ * written on a new line, and an extra newline is added at the end of the file.
+ * Existing file contents are overwritten.
+ *
+ * @param tags Pointer to the `list` structure containing tags to write.
+ * @param path Pointer to the file path to write tags to.
+ * @return 0 on success, 1 if the file cannot be opened.
+ */
+int write_tag_file(struct list *tags, char *path);
 
 #endif /* TAG_H_ */

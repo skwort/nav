@@ -18,6 +18,7 @@
  */
 struct state {
     char        nav_path[PATH_MAX];
+    char        tagfile_path[PATH_MAX];
     char        *uname;
     int         sfd;
 

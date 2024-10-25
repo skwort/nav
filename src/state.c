@@ -34,6 +34,7 @@ int init_state(void)
 
         /* Set default state values */ 
         memset(singleton_state->nav_path, 0, PATH_MAX);
+        memset(singleton_state->tagfile_path, 0, PATH_MAX);
         singleton_state->uname = NULL;
         singleton_state->sfd = -1;
 

@@ -253,6 +253,9 @@ static void cmd_add(int pid, char *args)
 
 end:
     LOG_INF("Tag %s --> %s added.", tag, path);
+
+    write_tag_file(&state->tags, state->tagfile_path);
+
     sendto(state->sfd, "OK\n", 3, 0,
            (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
@@ -305,6 +308,7 @@ static void cmd_delete(int pid, char *args)
     } else {
         list_delete_node(&state->tags, tag);
         LOG_INF("Tag '%s' deleted.", tag);
+        write_tag_file(&state->tags, state->tagfile_path);
         sendto(state->sfd, "OK\n", 3, 0,
             (struct sockaddr *)&shell_data->sock_addr,
             sizeof(shell_data->sock_addr));

@@ -161,6 +161,9 @@ int main(int arc, char** argv)
     }
     LOG_INF("Path is %s", state->nav_path);
 
+    sprintf(state->tagfile_path, "/home/%s/.nav/tags", state->uname);
+    read_tag_file(&state->tags, state->tagfile_path);
+
     /* Create datagram socket for receiving messages from shells */
     state->sfd = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (state->sfd == -1) {
