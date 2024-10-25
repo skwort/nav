@@ -10,9 +10,26 @@
 #include <stdbool.h>
 #include <sys/stat.h>
 #include <errno.h>
+#include <unistd.h>
+#include <pwd.h>
 
 #include "utils.h"
 #include "log.h"
+
+char *get_username(void)
+{
+    uid_t uid;
+    struct passwd* pwd;
+
+    uid = getuid();
+    pwd = getpwuid(uid);
+    if (pwd == NULL) {
+        LOG_ERR("User does not exist.");
+        return NULL;
+    }
+
+    return pwd->pw_name;
+}
 
 int get_trailing_whitespace(char *s)
 {

@@ -9,7 +9,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/un.h>
-#include <pwd.h>
 #include <signal.h>
 
 #include "log.h"
@@ -18,22 +17,7 @@
 #include "state.h"
 #include "shell.h"
 #include "tag.h"
-
-char *get_username(void)
-{
-    uid_t uid;
-    struct passwd* pwd;
-
-    /* Need to get name of caller to get local dir */
-    uid = getuid();
-    pwd = getpwuid(uid);
-    if (pwd == NULL) {
-        LOG_ERR("User does not exist.");
-        return NULL;
-    }
-
-    return pwd->pw_name;
-}
+#include "utils.h"
 
 static int create_navdir(char *path)
 {
