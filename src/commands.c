@@ -34,6 +34,7 @@ enum commands {
     CMD_ADD,
     CMD_DELETE,
     CMD_SHOW,
+    CMD_GET,
     CMD_NUM 
 };
 
@@ -43,6 +44,7 @@ static void cmd_unregister(int pid, char *args);
 static void cmd_add(int pid, char *args);
 static void cmd_delete(int pid, char *args);
 static void cmd_show(int pid, char *args);
+static void cmd_get(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -62,6 +64,7 @@ const struct command cmd_table[] = {
     {"add", cmd_add},
     {"delete", cmd_delete},
     {"show", cmd_show},
+    {"get", cmd_get},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -375,7 +378,55 @@ static void cmd_show(int pid, char *args)
         tag_node = tag_node->next;
     }
 
-    sendto(state->sfd, buf, 1024, 0,
+    sendto(state->sfd, buf, 256, 0,
            (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
+}
+
+static void cmd_get(int pid, char *args)
+{
+    char *line = NULL, *token = NULL, *tag = NULL;
+    char *saveptr = NULL;
+    struct state *state;
+    struct node *tag_node;
+    struct node *shell_node;
+    struct shell *shell_data;
+    struct tag *tag_data;
+    char buf[100] = {0};
+    
+    state = get_state();
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
+        return;
+    }
+    shell_data = (struct shell *)shell_node->data;
+
+    line = args;
+    token = strtok_r(line, " ", &saveptr);
+    if (token == NULL) {
+        LOG_ERR("Too few tokens.");
+        return;
+    }
+
+    tag = strndup(token, get_trailing_whitespace(token));
+
+    /* Check if tag exists */
+    tag_node = list_get_node(&state->tags, tag);
+    if (tag_node == NULL) {
+        LOG_INF("Tag '%s' does not exist.", tag);
+        sendto(state->sfd, "BAD\n", 4, 0,
+            (struct sockaddr *)&shell_data->sock_addr,
+            sizeof(shell_data->sock_addr));
+    } else {
+        tag_data = (struct tag *)tag_node->data;
+        sprintf(buf,  "%s\n", tag_data->path);
+        sendto(state->sfd, buf, strlen(buf), 0,
+            (struct sockaddr *)&shell_data->sock_addr,
+            sizeof(shell_data->sock_addr));
+    }
+
+    free(tag);
+    return;
 }
