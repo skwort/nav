@@ -12,8 +12,6 @@
 #include <stdbool.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <sys/stat.h>
-#include <errno.h>
 #include <sys/un.h>
 
 #include "list.h"
@@ -21,6 +19,7 @@
 #include "state.h"
 #include "shell.h"
 #include "tag.h"
+#include "utils.h"
 
 /**
  * @brief Enum representing the available commands.
@@ -180,40 +179,6 @@ static void cmd_unregister(int pid, char *args)
 }
 
 
-/** Get the index of the first trailing whitespace in a string */
-static int get_trailing_whitespace(char *s)
-{
-    int i = 0;
-    char *p = s;
-
-    while (p != NULL) {
-        if (*p == '\n' || *p == ' ')
-            break;
-        i++;
-        p++;
-    }
-
-    return i;
-}
-
-
-/** Validate a tag path to ensure it exists */
-static bool valid_path(char *path)
-{
-    struct stat sb;
-    int err;
-
-    err = fstatat(0, path, &sb, 0);
-    if (err && errno == ENOENT) {
-        LOG_ERR("Path '%s' does not exist.", path);
-        return false;
-    } else if (err) {
-        LOG_ERR("Bad path %s", path);
-        return false;
-    }
-
-    return true;
-}
 
 static void cmd_add(int pid, char *args)
 {
