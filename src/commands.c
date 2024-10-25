@@ -183,19 +183,6 @@ static int get_trailing_whitespace(char *s)
     return i;
 }
 
-/** Make sure the caller exists */
-static struct node *shell_exists(struct state *state, int pid)
-{
-    struct node *shell_node;
-
-    shell_node = list_get_node(&state->shells, &pid);
-    if (shell_node == NULL) {
-        LOG_ERR("shell %d not registered", pid);
-        return NULL;
-    }
-
-    return shell_node;
-}
 
 /** Validate a tag path to ensure it exists */
 static bool valid_path(char *path)
@@ -223,11 +210,16 @@ static void cmd_add(int pid, char *args)
     struct state *state;
     struct node *tag_node;
     struct tag *tag_data;
+    struct node *shell_node;
+    struct shell *shell_data;
 
     state = get_state();
 
-    if (!shell_exists(state, pid))
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
         return;
+    }
 
     /* Extract args */
     for (j = 1, line = args; ; j++, line = NULL) {
@@ -296,11 +288,16 @@ static void cmd_delete(int pid, char *args)
     char *saveptr = NULL;
     struct state *state;
     struct node *tag_node;
+    struct node *shell_node;
+    struct shell *shell_data;
 
     state = get_state();
 
-    if (!shell_exists(state, pid))
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
         return;
+    }
 
     line = args;
     token = strtok_r(line, " ", &saveptr);
@@ -333,14 +330,16 @@ static void cmd_show(int pid, char *args)
     struct node *shell_node;
     struct shell *shell_data;
     struct tag *tag_data;
-    char buf[1024] = {0};
+    char buf[256] = {0};
     int offset = 0;
     
     state = get_state();
 
-    shell_node = shell_exists(state, pid);
-    if (!shell_node)
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
         return;
+    }
 
     shell_data = (struct shell *)shell_node->data;
 
