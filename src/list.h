@@ -76,6 +76,18 @@ struct node *list_get_node(struct list *l, void *key);
 int list_append_node(struct list *l, struct node *n);
 
 /**
+ * @brief Prepends a node to the start of the list.
+ *
+ * This function prepends the given node to the start of the list.
+ * The list's item count is incremented.
+ *
+ * @param l Pointer to the list.
+ * @param n Pointer to the node to append.
+ * @return 0 on success, non-zero on failure.
+ */
+int list_prepend_node(struct list *l, struct node *n);
+
+/**
  * @brief Deletes a node from the list by key.
  *
  * This function searches the list for a node whose data matches the provided

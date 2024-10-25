@@ -34,6 +34,9 @@ enum commands {
     CMD_DELETE,
     CMD_SHOW,
     CMD_GET,
+    CMD_PUSH,
+    CMD_POP,
+    CMD_ACTIONS,
     CMD_NUM 
 };
 
@@ -44,6 +47,9 @@ static void cmd_add(int pid, char *args);
 static void cmd_delete(int pid, char *args);
 static void cmd_show(int pid, char *args);
 static void cmd_get(int pid, char *args);
+static void cmd_push(int pid, char *args);
+static void cmd_pop(int pid, char *args);
+static void cmd_actions(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -64,6 +70,9 @@ const struct command cmd_table[] = {
     {"delete", cmd_delete},
     {"show", cmd_show},
     {"get", cmd_get},
+    {"push", cmd_push},
+    {"pop", cmd_pop},
+    {"actions", cmd_actions},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -125,6 +134,12 @@ static void cmd_register(int pid, char *args)
     snprintf(shell_data->sock_addr.sun_path, 108,
         "/home/%s/.nav/%d.sock", state->uname, pid); 
 
+    /* Initialise the action stack */
+    shell_data->actions.head = NULL;
+    shell_data->actions.n_items = 0;
+    shell_data->actions.compare_func = compare_action_path;
+    shell_data->actions.cleanup_func = cleanup_action;
+
     shell_node->data = shell_data;
     list_append_node(&state->shells, shell_node);
 
@@ -177,8 +192,6 @@ static void cmd_unregister(int pid, char *args)
            (struct sockaddr *)&shell_addr,
            sizeof(shell_addr));
 }
-
-
 
 static void cmd_add(int pid, char *args)
 {
@@ -398,4 +411,130 @@ static void cmd_get(int pid, char *args)
 
     free(tag);
     return;
+}
+
+static void cmd_push(int pid, char *args)
+{
+    char *action = NULL;
+    struct state *state;
+    struct node *shell_node;
+    struct shell *shell_data;
+    struct node *action_node;
+    struct action *action_data;
+    
+    state = get_state();
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
+        return;
+    }
+    shell_data = (struct shell *)shell_node->data;
+
+    if (args == NULL)
+        return;
+
+    action = strndup(args, get_trailing_whitespace(args));
+    if (!valid_path(action))
+        goto free;
+
+    LOG_INF("Adding action %s", action);
+
+    if (list_node_create(&action_node)) {
+        LOG_ERR("action node create failed");
+        goto free;
+    }
+
+    action_data = (struct action *)malloc(sizeof(struct action));
+    if (action_data == NULL) {
+        LOG_ERR("shell data malloc create failed");
+        goto free;
+    }
+
+    action_data->path = action;
+    action_node->data = action_data;
+    list_prepend_node(&shell_data->actions, action_node);
+
+    sendto(state->sfd, "OK\n", 4, 0,
+        (struct sockaddr *)&shell_data->sock_addr,
+        sizeof(shell_data->sock_addr));
+    return;
+
+free:
+    sendto(state->sfd, "BAD\n", 4, 0,
+        (struct sockaddr *)&shell_data->sock_addr,
+        sizeof(shell_data->sock_addr));
+    free(action);
+    return;
+}
+
+static void cmd_pop(int pid, char *args)
+{
+    struct state *state;
+    struct node *shell_node;
+    struct shell *shell_data;
+    struct node *action_node;
+    struct action *action_data;
+    char buf[100] = {0};
+
+    state = get_state();
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
+        return;
+    }
+    shell_data = (struct shell *)shell_node->data;
+
+    action_node = shell_data->actions.head;
+    if (action_node == NULL) {
+        sendto(state->sfd, "BAD\n", 4, 0,
+               (struct sockaddr *)&shell_data->sock_addr,
+               sizeof(shell_data->sock_addr));
+        return;
+    }
+    action_data = (struct action *)action_node->data;
+
+    sprintf(buf,  "%s\n", action_data->path);
+    sendto(state->sfd, buf, strlen(buf), 0,
+           (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
+
+    list_delete_node(&shell_data->actions, action_data->path);
+
+    return;
+}
+
+static void cmd_actions(int pid, char *args)
+{
+    struct state *state;
+    struct node *shell_node;
+    struct shell *shell_data;
+    struct node *action_node;
+    struct action *action_data;
+    char buf[1024] = {0};
+    int i;
+    int offset = 0;
+    
+    state = get_state();
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
+        return;
+    }
+    shell_data = (struct shell *)shell_node->data;
+
+    i = 1;
+    action_node = shell_data->actions.head;
+    while (action_node != NULL) {
+        action_data = (struct action *)action_node->data;
+        offset += sprintf(buf + offset,  "    %d. %s\n", i, action_data->path);
+        action_node = action_node->next;
+        i++;
+    }
+
+    sendto(state->sfd, buf, strlen(buf), 0,
+           (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
 }

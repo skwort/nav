@@ -12,6 +12,8 @@
 
 #include <sys/un.h>
 
+#include "list.h"
+
 /**
  * @brief Structure representing a shell node.
  *
@@ -20,6 +22,16 @@
 struct shell {
     int pid;
     struct sockaddr_un sock_addr;
+    struct list actions;
+};
+
+/**
+ * @brief Structure representing a node in the action stack.
+ *
+ * This structure stores information about an action in the action stack.
+ */
+struct action {
+    char *path;
 };
 
 /**
@@ -45,5 +57,19 @@ int compare_shell_pid(void *data, void *key);
  * @return 0 on success.
  */
 int cleanup_shell(void *data);
+
+/**
+ * @brief Cleans up and deallocates memory for a shell's action stack node.
+ *
+ * This function frees the memory associated with each action in the action
+ * list `actions`. It is used as a cleanup function when removing actions nodes
+ * from the action list.
+ *
+ * @param data Pointer to the `struct action` to be cleaned up.
+ * @return 0 on success.
+ */
+int cleanup_action(void *data);
+
+int compare_action_path(void *data, void *key);
 
 #endif /* SHELL_H_ */

@@ -41,6 +41,23 @@ int list_append_node(struct list *l, struct node *n)
     return 0;
 }
 
+int list_prepend_node(struct list *l, struct node *n)
+{
+    /* empty list */
+    if (l->head == NULL) {
+        l->head = n;
+        l->n_items++;
+        return 0; 
+    }
+
+    /* non-empty list */
+    n->next = l->head; 
+    l->head = n;
+    l->n_items++;
+
+    return 0;
+}
+
 int list_delete_node(struct list *l, void *key)
 {
     struct node *curr, *prev;
