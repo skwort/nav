@@ -37,6 +37,8 @@ client: $(CLIENT_OBJS) | $(OBJDIR) $(CLIENT_OBJDIR) $(SHARED_OBJDIR)
 ${OBJDIR}/%.o: ${SRCDIR}/%.c | $(OBJDIR) $(DAEMON_OBJDIR) $(CLIENT_OBJDIR) $(SHARED_OBJDIR)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
+all: daemon client
+
 # Clean up object files and executables
 .PHONY: clean
 clean:
