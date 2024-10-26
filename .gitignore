@@ -1,4 +1,7 @@
 build/
+.venv
+__pycache__
+.pytest_cache
 
 # Xournal++ files
 *.xopp
