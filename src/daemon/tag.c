@@ -76,7 +76,7 @@ int read_tag_file(struct list *tags, char *path)
             continue;
         }
 
-        if (!valid_path(path)) {
+        if (!valid_path(tag_path)) {
             free(tag);
             free(tag_path);
             continue;
