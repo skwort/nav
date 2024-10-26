@@ -85,7 +85,7 @@ int list_delete_node(struct list *l, void *key)
             if (prev)
                 prev->next = curr->next;
 
-            l->cleanup_func(l->head->data);
+            l->cleanup_func(curr->data);
             free(curr);
             l->n_items--;
             break;
