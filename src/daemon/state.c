@@ -13,6 +13,7 @@
 #include <errno.h>
 
 #include "state.h"
+#include "list.h"
 #include "log.h"
 
 /** 
@@ -58,6 +59,9 @@ int init_state(void)
 
 void deinit_state(void)
 {
+    list_delete_all(&singleton_state->shells);
+    list_delete_all(&singleton_state->tags);
+
     free(singleton_state);
 }
 

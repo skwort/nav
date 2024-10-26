@@ -101,4 +101,12 @@ int list_prepend_node(struct list *l, struct node *n);
  */
 int list_delete_node(struct list *l, void *key);
 
+/**
+ * @brief Remove all nodes from a list
+ *
+ * @param l Pointer to the list.
+ * @return 0 on success, non-zero on failure.
+ */
+int list_delete_all(struct list *l);
+
 #endif /* LIST_H_ */

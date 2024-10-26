@@ -97,6 +97,27 @@ int list_delete_node(struct list *l, void *key)
     return 0;
 }
 
+int list_delete_all(struct list *l)
+{
+    struct node *curr;
+
+    /* empty list */
+    if (l->head == NULL) {
+        return 0;
+    }
+
+    curr = l->head;
+    while (curr != NULL) {
+        l->head = curr->next;
+        l->cleanup_func(curr->data);
+        free(curr);
+        l->n_items--;
+        curr = l->head;
+    }
+
+    return 0;
+}
+
 struct node *list_get_node(struct list *l, void *key)
 {
     struct node* curr;
