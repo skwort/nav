@@ -110,22 +110,10 @@ void loop(struct state *state)
     }
 }
 
-int main(int arc, char** argv)
+static inline void setup_initial_state(struct state *state)
 {
     int err;
-    struct state *state;
-    struct sockaddr_un nav_addr;
 
-    /* Register SIGINT handler */
-    struct sigaction sa;
-    sa.sa_sigaction = &handler;
-    sigaction(SIGINT, &sa, NULL);
-
-    /* Setup state */
-    if (init_state()) {
-        exit(EXIT_FAILURE);
-    }
-    state = get_state();
     state->shells.compare_func = compare_shell_pid;
     state->shells.cleanup_func = cleanup_shell;
     state->tags.compare_func = compare_tag_tag;
@@ -147,6 +135,20 @@ int main(int arc, char** argv)
 
     sprintf(state->tagfile_path, "/home/%s/.nav/tags", state->uname);
     read_tag_file(&state->tags, state->tagfile_path);
+}
+
+static void register_signal_handlers(void)
+{
+    struct sigaction sa;
+    sa.sa_sigaction = &handler;
+    sigaction(SIGINT, &sa, NULL);
+
+}
+
+static void setup_socket(struct state *state)
+{
+    int err;
+    struct sockaddr_un nav_addr;
 
     /* Create datagram socket for receiving messages from shells */
     state->sfd = socket(AF_UNIX, SOCK_DGRAM, 0);
@@ -163,11 +165,25 @@ int main(int arc, char** argv)
         LOG_ERR("bind: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+}
+
+int main(int argc, char** argv)
+{
+    struct state *state;
+
+    if (init_state()) {
+        exit(EXIT_FAILURE);
+    }
+    state = get_state();
+
+    setup_initial_state(state);
+    setup_socket(state);
+    register_signal_handlers();
 
     loop(state);
 
-    /* Remove socket */
     unlink(state->nav_path);
+    close(state->sfd);
     deinit_state();
 
     return 0;
