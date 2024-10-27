@@ -89,6 +89,24 @@ void setup_socket(char *pid)
     }
 }
 
+void print_usage(const char *program_name) {
+    printf("Usage: %s [options] <command> [arguments]\n", program_name);
+    printf(
+        "Options:\n"
+        "  -d <directory>    Specify the directory to use.\n"
+        "  -v                Print version.\n"
+        "\n"
+        "Note: A PID must prefix all commands shown below. Use $$ in bash.\n"
+        "\n"
+        "Commands:\n"
+        "  get [tag]         Retrieve the path for the the specified tag.\n"
+        "  add [tag] [path]  Add a new tag-path association.\n"
+        "  delete [tag]      Remove the specified tag.\n"
+        "  show              Show all tag-path associations.\n"
+        "  push              Save an action to the the action stack.\n"
+        "  pop               Get the last action from the action stack.\n"
+        "  actions           List all recorded actions.\n");
+}
 
 int main(int argc, char** argv)
 {
@@ -103,13 +121,13 @@ int main(int argc, char** argv)
             printf("nav client version 0\n");
             exit(EXIT_SUCCESS);
         default:
-            fprintf(stderr, "Usage: %s -d <directory> [command]\n", argv[0]);
+            print_usage(argv[0]);
             exit(EXIT_FAILURE);
         }
     }
 
     if (optind >= argc) {
-        fprintf(stderr, "Usage: %s -d <directory> [command]\n", argv[0]);
+        print_usage(argv[0]);
         exit(EXIT_FAILURE);
     }
 
