@@ -1,3 +1,5 @@
+#include <asm-generic/socket.h>
+#include <bits/types/struct_timeval.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,7 +14,6 @@
 
 /* Global state variables */
 static int sfd;
-static char *uname;
 static struct sockaddr_un my_addr;
 static struct sockaddr_un nav_addr;
 static char rootdir[64] = {0};
@@ -38,6 +39,7 @@ static void process_command(int argc, char** argv)
 {
     char buf[1024] = {0};
     int offset = 0;
+    int err = 0;
     char **ptr = argv;
 
     while (*ptr != NULL) {
@@ -48,7 +50,14 @@ static void process_command(int argc, char** argv)
     send(sfd, buf, strlen(buf), 0);
 
     memset(buf, 0, sizeof(buf));
-    recv(sfd, buf, sizeof(buf), 0);
+    err = recv(sfd, buf, sizeof(buf), 0);
+    if (err == -1) {
+        LOG_ERR("recv: %s", strerror(errno));
+        close(sfd);
+        unlink(my_addr.sun_path);
+        exit(EXIT_FAILURE);
+    }
+
     printf("%s", buf);
 
     close(sfd);
@@ -60,13 +69,21 @@ static void process_command(int argc, char** argv)
 void setup_socket(char *pid)
 {
     int err;
-
-    nav_addr.sun_family = AF_UNIX;
-    snprintf(nav_addr.sun_path, 108, "%s/nav.sock", rootdir);
+    struct timeval timeval;
 
     sfd = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (sfd == -1) {
         LOG_ERR("socket: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    /* Set 0.05 second timeout on receive */
+    timeval.tv_sec = 0;
+    timeval.tv_usec = 50000; 
+    err = setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, &timeval, sizeof(timeval));
+    if (err == -1) {
+        LOG_ERR("setsockopt: %s", strerror(errno));
+        close(sfd);
         exit(EXIT_FAILURE);
     }
 
@@ -80,6 +97,9 @@ void setup_socket(char *pid)
         exit(EXIT_FAILURE);
     }
 
+    nav_addr.sun_family = AF_UNIX;
+    snprintf(nav_addr.sun_path, 108, "%s/nav.sock", rootdir);
+
     err = connect(sfd, (struct sockaddr *)&nav_addr, sizeof(nav_addr));
     if (err == -1) {
         LOG_ERR("connect: %s '%s'", strerror(errno), nav_addr.sun_path);
@@ -89,7 +109,8 @@ void setup_socket(char *pid)
     }
 }
 
-void print_usage(const char *program_name) {
+void print_usage(const char *program_name)
+{
     printf("Usage: %s [options] <command> [arguments]\n", program_name);
     printf(
         "Options:\n"
@@ -111,6 +132,7 @@ void print_usage(const char *program_name) {
 int main(int argc, char** argv)
 {
     int opt;
+    char *uname;
 
     while ((opt = getopt(argc, argv, "vd:")) != -1) {
         switch (opt) {
@@ -131,17 +153,16 @@ int main(int argc, char** argv)
         exit(EXIT_FAILURE);
     }
 
-    uname = get_username();
-    if (uname == NULL) {
-        LOG_ERR("Invalid user.");
-        exit(EXIT_FAILURE);
-    }
-
     /* Setup root directory */
     if (strlen(rootdir) > 0) {
         if (!valid_path(rootdir))
             exit(EXIT_FAILURE);
     } else {
+        uname = get_username();
+        if (uname == NULL) {
+            LOG_ERR("Invalid user.");
+            exit(EXIT_FAILURE);
+        }
         sprintf(rootdir, "/home/%s/.nav", uname);
     }
     LOG_INF("Using root nav directory '%s'", rootdir);

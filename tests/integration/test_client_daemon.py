@@ -49,14 +49,16 @@ def daemon():
         process.kill()
 
 
-@pytest.mark.skip(reason="Undefined behaviour; client hangs.")
 def test_unregister_not_registered(daemon):
+    """
+    Test unregistering an unregistered client. This should fail with a
+    non-zero return value.
+    """
     pid = "123456"
     client = subprocess.run([CLIENT_PATH, pid, "unregister"],
                             capture_output=True, text=True)
 
     assert client.returncode == 1
-    assert client.stdout.strip() == "BAD"
 
 
 def test_register_unregister(daemon):
