@@ -132,7 +132,7 @@ static void cmd_register(int pid, char *args)
     shell_data->pid = pid;
     shell_data->sock_addr.sun_family = AF_UNIX;
     snprintf(shell_data->sock_addr.sun_path, 108,
-        "/home/%s/.nav/%d.sock", state->uname, pid); 
+        "%s/%d.sock", state->rootdir, pid); 
 
     /* Initialise the action stack */
     shell_data->actions.head = NULL;

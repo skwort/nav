@@ -13,10 +13,13 @@
 #include <limits.h>
 #include "list.h"
 
+#define ROOTDIR_LEN 64
+
 /**
  * @brief Structure representing the global state of navd.
  */
 struct state {
+    char        rootdir[ROOTDIR_LEN];
     char        nav_path[PATH_MAX];
     char        tagfile_path[PATH_MAX];
     char        *uname;

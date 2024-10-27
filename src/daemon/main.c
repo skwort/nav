@@ -19,46 +19,6 @@
 #include "tag.h"
 #include "utils.h"
 
-static int create_navdir(char *path)
-{
-    return mkdir(path, 0700);
-}
-
-int get_navpath(char *uname, char* path)
-{
-    int err;
-    struct stat sb;
-    char dir[108] = {0};
-
-    /* Generate the top-level nav path */
-    err = snprintf(dir, 108, "/home/%s/.nav", uname);
-    if (err >= 108 || err <= 0) {
-        LOG_ERR("Invalid username or path too long. Cannot get nav path.");
-        return EINVAL;
-    }
-
-    /* Check it exists */
-    err = fstatat(0, dir, &sb, 0);
-    if (err && errno == ENOENT) {
-        LOG_INF("Creating navdir.");
-        err = create_navdir(dir);
-    }
-
-    if (err) {
-        LOG_ERR("Error getting nav path.");
-        return 1;
-    }
-
-    /* Make the socket path */
-    err = snprintf(path, 108, "%s/nav.sock", dir);
-    if (err >= 108 || err <= 0) {
-        LOG_ERR("Cannot get nav socket path.");
-        return EINVAL;
-    }
-
-    return 0;
-}
-
 void handler(int signo, siginfo_t *info, void* context)
 {
     struct state *state = get_state();
@@ -110,9 +70,10 @@ void loop(struct state *state)
     }
 }
 
-static inline void setup_initial_state(struct state *state)
+static inline void setup_initial_state(struct state *state, char *rootdir)
 {
     int err;
+    struct stat sb;
 
     state->shells.compare_func = compare_shell_pid;
     state->shells.cleanup_func = cleanup_shell;
@@ -126,14 +87,41 @@ static inline void setup_initial_state(struct state *state)
     }
     LOG_INF("User is %s", state->uname);
 
-    err = get_navpath(state->uname, state->nav_path);
-    if (err == -1) {
-        LOG_ERR("Unable to get navpath.");
+    if (rootdir == NULL) {
+        /* Use the default root directory */
+        err = snprintf(state->rootdir, 64, "/home/%s/.nav", state->uname);
+        if (err >= 108 || err <= 0) {
+            LOG_ERR("Unable to set root directory.");
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        /* Use the specified root directory */
+        err = snprintf(state->rootdir, 108, "%s", rootdir);
+        if (err >= 108 || err <= 0) {
+            LOG_ERR("Unable to set root directory.");
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    err = fstatat(0, state->rootdir, &sb, 0);
+    if (err && errno == ENOENT) {
+        LOG_INF("Creating root dir '%s'", state->rootdir);
+        err = mkdir(state->rootdir, 0700);
+    }
+
+    if (err) {
+        LOG_ERR("Error with root dir.");
         exit(EXIT_FAILURE);
     }
-    LOG_INF("Path is %s", state->nav_path);
+    LOG_INF("Root dir is %s", state->rootdir);
 
-    sprintf(state->tagfile_path, "/home/%s/.nav/tags", state->uname);
+    err = snprintf(state->nav_path, 108, "%s/nav.sock", state->rootdir);
+    if (err >= 108 || err <= 0) {
+        LOG_ERR("Cannot get nav socket path.");
+        exit(EXIT_FAILURE);
+    }
+
+    sprintf(state->tagfile_path, "%s/tags", state->rootdir);
     read_tag_file(&state->tags, state->tagfile_path);
 }
 
@@ -167,16 +155,47 @@ static void setup_socket(struct state *state)
     }
 }
 
+void print_usage(const char *program_name)
+{
+    printf("Usage: %s [options] <command> [arguments]\n", program_name);
+    printf(
+        "Options:\n"
+        "  -d <directory>    Specify the directory to use.\n"
+        "  -v                Print version.\n");
+}
+
+static void parse_args(int argc, char** argv, char **dir)
+{
+    int opt;
+
+    while ((opt = getopt(argc, argv, "vd:")) != -1) {
+        switch (opt) {
+        case 'd':
+            *dir = optarg;
+            break;
+        case 'v':
+            printf("nav daemon version 0\n");
+            exit(EXIT_SUCCESS);
+        default:
+            print_usage(argv[0]);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
 int main(int argc, char** argv)
 {
     struct state *state;
+    char *rootdir = NULL;
+
+    parse_args(argc, argv, &rootdir);
 
     if (init_state()) {
         exit(EXIT_FAILURE);
     }
     state = get_state();
 
-    setup_initial_state(state);
+    setup_initial_state(state, rootdir);
     setup_socket(state);
     register_signal_handlers();
 
