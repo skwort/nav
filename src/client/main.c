@@ -17,7 +17,7 @@ static struct sockaddr_un my_addr;
 static struct sockaddr_un nav_addr;
 static char rootdir[64] = {0};
 
-static void handler(int signo, siginfo_t *info, void* context)
+static void sigint_handler(int signo, siginfo_t *info, void* context)
 {
     if (strlen(my_addr.sun_path) > 0) {
         unlink(my_addr.sun_path);
@@ -26,11 +26,19 @@ static void handler(int signo, siginfo_t *info, void* context)
     _exit(EXIT_SUCCESS);
 }
 
+void register_handlers(void)
+{
+    struct sigaction sa;
+
+    sa.sa_sigaction = &sigint_handler;
+    sigaction(SIGINT, &sa, NULL);
+}
+
 static void process_command(int argc, char** argv)
 {
     char buf[1024] = {0};
     int offset = 0;
-    char **ptr = argv + 1;  /* Skip PID */
+    char **ptr = argv;
 
     while (*ptr != NULL) {
         offset += sprintf(buf + offset,  "%s ", *ptr);
@@ -49,15 +57,42 @@ static void process_command(int argc, char** argv)
     return;
 }
 
+void setup_socket(char *pid)
+{
+    int err;
+
+    nav_addr.sun_family = AF_UNIX;
+    snprintf(nav_addr.sun_path, 108, "%s/nav.sock", rootdir);
+
+    sfd = socket(AF_UNIX, SOCK_DGRAM, 0);
+    if (sfd == -1) {
+        LOG_ERR("socket: %s", strerror(errno));
+        exit(EXIT_FAILURE);
+    }
+
+    my_addr.sun_family = AF_UNIX;
+    snprintf(my_addr.sun_path, 108, "%s/%s.sock", rootdir, pid);
+
+    err = bind(sfd, (struct sockaddr *) &my_addr, sizeof(my_addr));
+    if (err == -1) {
+        LOG_ERR("bind: %s", strerror(errno));
+        close(sfd);
+        exit(EXIT_FAILURE);
+    }
+
+    err = connect(sfd, (struct sockaddr *)&nav_addr, sizeof(nav_addr));
+    if (err == -1) {
+        LOG_ERR("connect: %s '%s'", strerror(errno), nav_addr.sun_path);
+        close(sfd);
+        unlink(my_addr.sun_path);
+        exit(EXIT_FAILURE);
+    }
+}
+
+
 int main(int argc, char** argv)
 {
     int opt;
-    int err;
-    struct sigaction sa;
-
-    /* Register SIGINT handler */
-    sa.sa_sigaction = &handler;
-    sigaction(SIGINT, &sa, NULL);
 
     while ((opt = getopt(argc, argv, "vd:")) != -1) {
         switch (opt) {
@@ -93,31 +128,8 @@ int main(int argc, char** argv)
     }
     LOG_INF("Using root nav directory '%s'", rootdir);
 
-    nav_addr.sun_family = AF_UNIX;
-    snprintf(nav_addr.sun_path, 108, "%s/nav.sock", rootdir);
-
-    sfd = socket(AF_UNIX, SOCK_DGRAM, 0);
-    if (sfd == -1) {
-        LOG_ERR("socket: %s", strerror(errno));
-        exit(EXIT_FAILURE);
-    }
-
-    my_addr.sun_family = AF_UNIX;
-    snprintf(my_addr.sun_path, 108, "%s/%s.sock", rootdir, argv[optind]);
-    err = bind(sfd, (struct sockaddr *) &my_addr, sizeof(my_addr));
-    if (err == -1) {
-        LOG_ERR("bind: %s", strerror(errno));
-        close(sfd);
-        exit(EXIT_FAILURE);
-    }
-
-    err = connect(sfd, (struct sockaddr *)&nav_addr, sizeof(nav_addr));
-    if (err == -1) {
-        LOG_ERR("connect: %s '%s'", strerror(errno), nav_addr.sun_path);
-        close(sfd);
-        unlink(my_addr.sun_path);
-        exit(EXIT_FAILURE);
-    }
+    register_handlers();
+    setup_socket(argv[optind]);    
 
     argc -= optind;
     argv += optind;
