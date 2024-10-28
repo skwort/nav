@@ -15,15 +15,29 @@
 /* If defined, this will enable formatted log outputs using escape codes */
 #define PRETTY_LOG
 
+/* Define log levels */
+enum log_level {
+    LOG_LVL_INF = 0,
+    LOG_LVL_ERR,
+    LOG_LVL_NONE,
+};
+
+/**
+ * @brief Sets the internal log level to `level`
+ *
+ * This function allows for runtime filtering of log messages based on their
+ * severity.
+ */
+void set_log_level(int level);
+
 /**
  * @brief Logs a formatted message to the specified file stream.
  *
  * This internal function logs a message to the specified file stream, or to
  * `stderr` if the file stream is `NULL`. Each log entry includes a timestamp
  * and process ID (PID) before the actual log message.
- *
  */
-void _log(FILE *file, const char *level, const char *func,
+void _log(FILE *file, int level, const char *func,
           const char *file_name, const char *fmt, ...);
 
 /**
@@ -32,7 +46,6 @@ void _log(FILE *file, const char *level, const char *func,
  *
  * Logs a message to the specified file `f` using a formatted string with 
  * variable arguments. Uses `_log()` internally.
- *
  */
 #define LOGF(f, level, ...) _log(f, level, __func__, __FILE__, __VA_ARGS__)
 
@@ -42,14 +55,11 @@ void _log(FILE *file, const char *level, const char *func,
  *
  * Logs a message to `stderr` using a formatted string with variable arguments. 
  * Uses `_log()` internally.
- *
  */
 #define LOG(level, ...)  _log(NULL, level, __func__, __FILE__, __VA_ARGS__)
 
 /* Extra macros for pre-filled log levels */
-#define LOG_INF(...)  _log(NULL, "INFO", __func__, __FILE__, __VA_ARGS__)
-#define LOG_ERR(...)  _log(NULL, "ERR", __func__, __FILE__, __VA_ARGS__)
-
-
+#define LOG_INF(...)  _log(NULL, LOG_LVL_INF, __func__, __FILE__, __VA_ARGS__)
+#define LOG_ERR(...)  _log(NULL, LOG_LVL_ERR, __func__, __FILE__, __VA_ARGS__)
 
 #endif /* __LOG_H_ */
