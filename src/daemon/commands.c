@@ -37,7 +37,7 @@ enum commands {
     CMD_PUSH,
     CMD_POP,
     CMD_ACTIONS,
-    CMD_NUM 
+    CMD_NUM
 };
 
 /* Prototypes */
@@ -106,7 +106,6 @@ static void cmd_register(int pid, char *args)
     struct state *state;
     struct shell *shell_data;
     struct node *shell_node;
-    char buf[100] = {0};
     
     state = get_state();
 
@@ -144,8 +143,7 @@ static void cmd_register(int pid, char *args)
     list_append_node(&state->shells, shell_node);
 
     /* Send registration message */
-    snprintf(buf, 100, "%d register OK\n", pid);
-    sendto(state->sfd, buf, 100, 0,
+    sendto(state->sfd, "OK\n", 4, 0,
            (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
 
