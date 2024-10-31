@@ -10,7 +10,7 @@ script served its purpose, it lacked statefulness, making it impossible to
 return to a previous directory easily. With `nav`, you can now seamlessly
 navigate back and forth between directories.
 
-DEMO - ascii cinema.
+[![asciicast](https://asciinema.org/a/EEpdDuyA8H9BkSPjTO3SNW6nS.svg)](https://asciinema.org/a/EEpdDuyA8H9BkSPjTO3SNW6nS)
 
 ### Architecture
 `nav` consists of three main components:
