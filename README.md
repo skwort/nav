@@ -45,9 +45,10 @@ Commands:
   [tag]             Navigate to the specified tag.
   add [tag] [path]  Add a new tag-path association.
   delete [tag]      Remove the specified tag.
-  show              Show all tag-path associations.
-  back|b              Undo the previous action.
-  actions           List all recorded actions.
+  show|s            Show all tag-path associations.
+  back|b            Undo the previous action.
+  actions|a         List all recorded actions.
+  reset|ar          Clear all recorded actions.
 ```
 Each successful navigation, i.e. `nav [tag]` will push the current working
 directory to the action stack for that shell. `nav back` will *undo* the
