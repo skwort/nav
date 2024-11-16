@@ -114,6 +114,12 @@ static void cmd_register(int pid, char *args)
     shell_node = list_get_node(&state->shells, &pid);
     if (shell_node) {
         LOG_INF("shell %d already registered", pid);
+
+        shell_data = (struct shell *)shell_node->data;
+        sendto(state->sfd, "OK\n", 4, 0,
+            (struct sockaddr *)&shell_data->sock_addr,
+            sizeof(shell_data->sock_addr));
+
         return;
     }
 

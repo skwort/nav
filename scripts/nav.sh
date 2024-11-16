@@ -21,8 +21,7 @@ function nav_usage {
 }
 
 function unregister_client {
-    $NAV_CLIENT $$ unregister 2> /dev/null
-    echo "Client unregistered"
+    $NAV_CLIENT $$ unregister 2> /dev/null > /dev/null
 }
 
 # Unregister the client when shell exits
@@ -30,7 +29,13 @@ trap unregister_client EXIT
 
 function nav {
     # Attempt to register
-    $NAV_CLIENT $$ register 2> /dev/null > /dev/null
+    connected=$($NAV_CLIENT $$ register 2> /dev/null)
+
+    if [ -z "$connected" ]; then
+        echo $connected
+        error "Unable to reach daemon. Is it running?"
+        return 1;
+    fi
 
     case "$1" in
         add)
@@ -72,8 +77,10 @@ function nav {
         actions)
             # Command: nav actions 
             output=$($NAV_CLIENT $$ actions 2> /dev/null)
-            if [ "$output" != "BAD" ]; then
+            if [ "$output" != "BAD" ] && [ "$output" != ""]; then
                 echo "$output"
+            else
+                error "No previous actions found."
             fi
             ;;
         back|b)
@@ -96,7 +103,7 @@ function nav {
             dir=$($NAV_CLIENT $$ get "$tag" 2> /dev/null)
 
             if [ "$dir" == "BAD" ] || [ -z "$dir" ]; then
-                error "Tag '$tag' not found or daemon did not respond"
+                error "Tag '$tag' not found."
             else
                 # Push current directory to the action stack
                 output=$($NAV_CLIENT $$ push "$(pwd)" 2> /dev/null)
