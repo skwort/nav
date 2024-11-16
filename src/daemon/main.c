@@ -130,7 +130,7 @@ static void register_signal_handlers(void)
     struct sigaction sa;
     sa.sa_sigaction = &handler;
     sigaction(SIGINT, &sa, NULL);
-
+    sigaction(SIGTERM, &sa, NULL);
 }
 
 static void setup_socket(struct state *state)
