@@ -345,3 +345,11 @@ def test_tags_list(daemon):
 
     assert client.returncode == 0
     assert client.stdout.strip() == "one two three"
+
+    # Unregister with daemon
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "unregister"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
