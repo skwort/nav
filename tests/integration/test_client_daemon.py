@@ -267,7 +267,7 @@ def test_action_stack(daemon):
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
-    # Pop 
+    # Pop
     client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
                              "pop"],
                             capture_output=True, text=True)
@@ -275,7 +275,7 @@ def test_action_stack(daemon):
     assert client.returncode == 0
     assert client.stdout.strip() == "/home/"
 
-    # Pop 
+    # Pop
     client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
                              "pop"],
                             capture_output=True, text=True)
@@ -283,13 +283,76 @@ def test_action_stack(daemon):
     assert client.returncode == 0
     assert client.stdout.strip() == "/tmp/"
 
-    # Empty pop 
+    # Empty pop
     client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
                              "pop"],
                             capture_output=True, text=True)
 
     assert client.returncode == 0
     assert client.stdout.strip() == "BAD"
+
+    # Unregister with daemon
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "unregister"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+
+def test_action_reset(daemon):
+    """
+    Test the action stack reset.
+    """
+    pid = "123456"
+
+    # Register with daemon
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "register"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # Push /tmp/
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "push", "/tmp/"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # Push /home/
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "push", "/home/"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # List actions
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "actions"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert all(path in client.stdout for path in ["/home/", "/tmp/"])
+
+    # Reset
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "reset"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # List actions
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "actions"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == ""
 
     # Unregister with daemon
     client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,

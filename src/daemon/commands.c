@@ -38,6 +38,7 @@ enum commands {
     CMD_POP,
     CMD_ACTIONS,
     CMD_LIST,
+    CMD_RESET,
     CMD_NUM
 };
 
@@ -52,6 +53,7 @@ static void cmd_push(int pid, char *args);
 static void cmd_pop(int pid, char *args);
 static void cmd_actions(int pid, char *args);
 static void cmd_list(int pid, char *args);
+static void cmd_reset(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -76,6 +78,7 @@ const struct command cmd_table[] = {
     {"pop", cmd_pop},
     {"actions", cmd_actions},
     {"list", cmd_list},
+    {"reset", cmd_reset},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -589,4 +592,28 @@ static void cmd_actions(int pid, char *args)
     sendto(state->sfd, buf, strlen(buf), 0,
            (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
+}
+
+static void cmd_reset(int pid, char *args)
+{
+    struct state *state;
+    struct node *shell_node;
+    struct shell *shell_data;
+
+    state = get_state();
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
+        return;
+    }
+    shell_data = (struct shell *)shell_node->data;
+
+    list_delete_all(&shell_data->actions);
+
+    sendto(state->sfd, "OK\n", 4, 0,
+        (struct sockaddr *)&shell_data->sock_addr,
+        sizeof(shell_data->sock_addr));
+    return;
+
 }
