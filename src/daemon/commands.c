@@ -348,7 +348,7 @@ static void cmd_show(int pid, char *args)
     struct node *shell_node;
     struct shell *shell_data;
     struct tag *tag_data;
-    char buf[256] = {0};
+    char buf[2048] = {0};
     int offset = 0;
     
     state = get_state();
@@ -365,12 +365,12 @@ static void cmd_show(int pid, char *args)
     while (tag_node != NULL) {
         tag_data = (struct tag *)tag_node->data;
 
-        offset += sprintf(buf + offset,  "%s --> %s\n", tag_data->tag,
+        offset += snprintf(buf + offset,  sizeof(buf) - offset, "%s --> %s\n", tag_data->tag,
                           tag_data->path);
         tag_node = tag_node->next;
     }
 
-    sendto(state->sfd, buf, 256, 0,
+    sendto(state->sfd, buf, strlen(buf), 0,
            (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
 }
