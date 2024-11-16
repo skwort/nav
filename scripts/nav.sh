@@ -17,6 +17,7 @@ function nav_usage {
     echo "  show|s            Show all tag-path associations."
     echo "  back|b            Undo the previous action."
     echo "  actions|a         List all recorded actions."
+    echo "  reset|ar          Delete all recorded actions."
     return 1
 }
 
@@ -84,7 +85,7 @@ function nav {
             if [ "$output" != "BAD" ] && [ -n "$output" ]; then
                 echo "$output"
             else
-                error "No previous actions found."
+                echo "No previous actions found"
             fi
             ;;
         back|b)
@@ -93,7 +94,13 @@ function nav {
             if [ -n "$dir" ] && [ "$dir" != "BAD" ]; then
                 cd "$dir" || error "Failed to navigate to $dir"
             else
-                error "No previous directory found in action stack"
+                echo "No previous actions found"
+            fi
+            ;;
+        reset|ar)
+            output=$($NAV_CLIENT $$ reset 2> /dev/null)
+            if [ "$output" == "OK" ]; then
+                echo "Action stack cleared"
             fi
             ;;
         *)
