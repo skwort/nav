@@ -14,9 +14,9 @@ function nav_usage {
     echo "  [tag]             Navigate to the specified tag."
     echo "  add [tag] [path]  Add a new tag-path association."
     echo "  delete [tag]      Remove the specified tag."
-    echo "  show              Show all tag-path associations."
+    echo "  show|s            Show all tag-path associations."
     echo "  back|b            Undo the previous action."
-    echo "  actions           List all recorded actions."
+    echo "  actions|a         List all recorded actions."
     return 1
 }
 
@@ -67,17 +67,17 @@ function nav {
                 fi
             fi
             ;;
-        show)
+        show|s)
             # Command: nav show
             output=$($NAV_CLIENT $$ show 2> /dev/null)
             if [ "$output" != "BAD" ]; then
                 echo "$output"
             fi
             ;;
-        actions)
+        actions|a)
             # Command: nav actions 
             output=$($NAV_CLIENT $$ actions 2> /dev/null)
-            if [ "$output" != "BAD" ] && [ "$output" != ""]; then
+            if [ "$output" != "BAD" ] && [ -n "$output" ]; then
                 echo "$output"
             else
                 error "No previous actions found."
