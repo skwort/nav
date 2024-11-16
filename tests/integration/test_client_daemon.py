@@ -237,7 +237,6 @@ def test_preloaded_tagfile(daemon_preloaded_tag):
     assert client.stdout.strip() == "OK"
 
 
-
 def test_action_stack(daemon):
     """
     Test the action stack: push, pop, and empty pop.
@@ -299,3 +298,50 @@ def test_action_stack(daemon):
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
+
+
+def test_tags_list(daemon):
+    """
+    Test listing tags.
+    """
+
+    pid = "123456"
+
+    # Register with daemon
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "register"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # Add one
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "add", "one", "/tmp/"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # Add three
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "add", "two", "/tmp/"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "add", "three", "/tmp/"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # List the tags
+    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
+                             "list"],
+                            capture_output=True, text=True)
+
+    assert client.returncode == 0
+    assert client.stdout.strip() == "one two three"

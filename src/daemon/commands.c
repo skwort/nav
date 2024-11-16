@@ -37,6 +37,7 @@ enum commands {
     CMD_PUSH,
     CMD_POP,
     CMD_ACTIONS,
+    CMD_LIST,
     CMD_NUM
 };
 
@@ -50,6 +51,7 @@ static void cmd_get(int pid, char *args);
 static void cmd_push(int pid, char *args);
 static void cmd_pop(int pid, char *args);
 static void cmd_actions(int pid, char *args);
+static void cmd_list(int pid, char *args);
 
 /**
  * @brief Structure representing a command entry.
@@ -73,6 +75,7 @@ const struct command cmd_table[] = {
     {"push", cmd_push},
     {"pop", cmd_pop},
     {"actions", cmd_actions},
+    {"list", cmd_list},
 };
 
 void dispatch_command(char *cmd_str, int pid, char *args)
@@ -363,6 +366,41 @@ static void cmd_show(int pid, char *args)
                           tag_data->path);
         tag_node = tag_node->next;
     }
+
+    sendto(state->sfd, buf, 256, 0,
+           (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
+}
+
+static void cmd_list(int pid, char *args)
+{
+    struct state *state;
+    struct node *tag_node;
+    struct node *shell_node;
+    struct shell *shell_data;
+    struct tag *tag_data;
+    char buf[256] = {0};
+    int offset = 0;
+    
+    state = get_state();
+
+    shell_node = list_get_node(&state->shells, &pid);
+    if (shell_node == NULL) {
+        LOG_ERR("shell %d does not exist", pid);
+        return;
+    }
+
+    shell_data = (struct shell *)shell_node->data;
+
+    tag_node = state->tags.head;
+    while (tag_node != NULL) {
+        tag_data = (struct tag *)tag_node->data;
+        offset += sprintf(buf + offset,  "%s ", tag_data->tag);
+        tag_node = tag_node->next;
+    }
+
+    if (offset > 0)
+        buf[offset - 1] = 0;
 
     sendto(state->sfd, buf, 256, 0,
            (struct sockaddr *)&shell_data->sock_addr,
