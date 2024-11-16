@@ -2,12 +2,12 @@
 
 NAV_CLIENT="${NAV_CLIENT:-./build/client}"
 
-function error {
+function _nav_error {
     echo "Error: $1"
     return 1
 }
 
-function nav_usage {
+function _nav_usage {
     echo "Usage: nav [command] <arguments>"
     echo ""
     echo "Commands:"
@@ -21,7 +21,7 @@ function nav_usage {
     return 1
 }
 
-function register_client {
+function _register_client {
     local connected
     connected=$($NAV_CLIENT $$ register 2>/dev/null)
 
@@ -31,16 +31,16 @@ function register_client {
     fi
 }
 
-function unregister_client {
+function _unregister_client {
     $NAV_CLIENT $$ unregister 2> /dev/null > /dev/null
 }
 
 # Unregister the client when shell exits
-trap unregister_client EXIT
+trap _unregister_client EXIT
 
 function nav {
     # Attempt to register
-    register_client || return 1
+    _register_client || return 1
 
     case "$1" in
         add)
@@ -48,13 +48,13 @@ function nav {
             tag="$2"
             path="$3"
             if [ -z "$tag" ] || [ -z "$path" ]; then
-                nav_usage
+                _nav_usage
             else
                 output=$($NAV_CLIENT $$ add "$tag" "$path" 2> /dev/null)
                 if [ "$output" == "OK" ]; then
                     echo "Added tag '$tag' with path '$path'"
                 else
-                    error "Failed to add tag '$tag'"
+                    _error "Failed to add tag '$tag'"
                 fi
             fi
             ;;
@@ -62,13 +62,13 @@ function nav {
             # Command: nav delete [tag]
             tag="$2"
             if [ -z "$tag" ]; then
-                nav_usage
+                _nav_usage
             else
                 output=$($NAV_CLIENT $$ delete "$tag" 2> /dev/null)
                 if [ "$output" == "OK" ]; then
                     echo "Deleted tag '$tag'"
                 else
-                    error "Failed to delete tag '$tag'"
+                    _error "Failed to delete tag '$tag'"
                 fi
             fi
             ;;
@@ -92,7 +92,7 @@ function nav {
             # Command: nav back
             dir=$($NAV_CLIENT $$ pop 2> /dev/null)
             if [ -n "$dir" ] && [ "$dir" != "BAD" ]; then
-                cd "$dir" || error "Failed to navigate to $dir"
+                cd "$dir" || _error "Failed to navigate to $dir"
             else
                 echo "No previous actions found"
             fi
@@ -107,22 +107,22 @@ function nav {
             # Command: nav [tag]
             tag="$1"
             if [ -z "$tag" ]; then
-                nav_usage
+                _nav_usage
                 return 1;
             fi
 
             dir=$($NAV_CLIENT $$ get "$tag" 2> /dev/null)
 
             if [ "$dir" == "BAD" ] || [ -z "$dir" ]; then
-                error "Tag '$tag' not found."
+                echo "Tag '$tag' not found."
             else
                 # Push current directory to the action stack
                 output=$($NAV_CLIENT $$ push "$(pwd)" 2> /dev/null)
                 if [ "$output" == "OK" ]; then
                     # Change directory to the retrieved path
-                    cd "$dir" || error "Failed to navigate to $dir"
+                    cd "$dir" || _error "Failed to navigate to $dir"
                 else
-                    error "Failed to push current directory to action stack"
+                    _error "Failed to push current directory to action stack"
                 fi
             fi
             ;;
@@ -142,7 +142,7 @@ function _nav_autocomplete {
     cmd_options="show back add delete actions"
 
     # Get tags
-    register_client || return 1
+    _register_client || return 1
     tag_options=$($NAV_CLIENT $$ list 2> /dev/null)
 
     case "$prev" in
