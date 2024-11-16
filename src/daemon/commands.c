@@ -480,6 +480,15 @@ static void cmd_push(int pid, char *args)
     if (!valid_path(action))
         goto free;
 
+    /* Reject immediate duplicate actions */
+    if (shell_data->actions.head != NULL) {
+        action_data = (struct action *)shell_data->actions.head->data;
+        if (action_data != NULL && !strcmp(action_data->path, action)) {
+            free(action);
+            goto ok;
+        }
+    }
+
     LOG_INF("Adding action %s", action);
 
     if (list_node_create(&action_node)) {
@@ -497,6 +506,7 @@ static void cmd_push(int pid, char *args)
     action_node->data = action_data;
     list_prepend_node(&shell_data->actions, action_node);
 
+ok:
     sendto(state->sfd, "OK\n", 4, 0,
         (struct sockaddr *)&shell_data->sock_addr,
         sizeof(shell_data->sock_addr));
