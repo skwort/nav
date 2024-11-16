@@ -20,6 +20,16 @@ function nav_usage {
     return 1
 }
 
+function register_client {
+    local connected
+    connected=$($NAV_CLIENT $$ register 2>/dev/null)
+
+    if [ -z "$connected" ]; then
+        error "Unable to reach daemon. Is it running?"
+        return 1
+    fi
+}
+
 function unregister_client {
     $NAV_CLIENT $$ unregister 2> /dev/null > /dev/null
 }
@@ -29,13 +39,7 @@ trap unregister_client EXIT
 
 function nav {
     # Attempt to register
-    connected=$($NAV_CLIENT $$ register 2> /dev/null)
-
-    if [ -z "$connected" ]; then
-        echo $connected
-        error "Unable to reach daemon. Is it running?"
-        return 1;
-    fi
+    register_client || return 1
 
     case "$1" in
         add)
@@ -127,19 +131,19 @@ function _nav_autocomplete {
     # Previous word (last completed)
     prev="${COMP_WORDS[COMP_CWORD-1]}"
 
-    # Define possible commands
-    options="show back add delete actions"
+    # Define commands
+    cmd_options="show back add delete actions"
+
+    # Get tags
+    register_client || return 1
+    tag_options=$($NAV_CLIENT $$ list 2> /dev/null)
 
     case "$prev" in
         nav)           
-            COMPREPLY=( $(compgen -W "$options" -- "$cur") )
+            COMPREPLY=( $(compgen -W "$cmd_options $tag_options" -- "$cur") )
             ;;
-        add)
-            if [[ "$COMP_CWORD" -eq 2 ]]; then
-                COMPREPLY=()
-            else
-                COMPREPLY=( $(compgen -d -- "$cur") )
-            fi
+        delete)
+            COMPREPLY=( $(compgen -W "$tag_options" -- "$cur") )
             ;;
         *)
             COMPREPLY=()
