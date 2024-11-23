@@ -26,7 +26,7 @@ function _register_client {
     connected=$($NAV_CLIENT $$ register 2>/dev/null)
 
     if [ -z "$connected" ]; then
-        error "Unable to reach daemon. Is it running?"
+        _nav_error "Unable to reach daemon. Is it running?"
         return 1
     fi
 }
@@ -54,7 +54,7 @@ function nav {
                 if [ "$output" == "OK" ]; then
                     echo "Added tag '$tag' with path '$path'"
                 else
-                    _error "Failed to add tag '$tag'"
+                    _nav_error "Failed to add tag '$tag'"
                 fi
             fi
             ;;
@@ -68,7 +68,7 @@ function nav {
                 if [ "$output" == "OK" ]; then
                     echo "Deleted tag '$tag'"
                 else
-                    _error "Failed to delete tag '$tag'"
+                    _nav_error "Failed to delete tag '$tag'"
                 fi
             fi
             ;;
@@ -92,7 +92,7 @@ function nav {
             # Command: nav back
             dir=$($NAV_CLIENT $$ pop 2> /dev/null)
             if [ -n "$dir" ] && [ "$dir" != "BAD" ]; then
-                cd "$dir" || _error "Failed to navigate to $dir"
+                cd "$dir" || _nav_error "Failed to navigate to $dir"
             else
                 echo "No previous actions found"
             fi
@@ -120,9 +120,9 @@ function nav {
                 output=$($NAV_CLIENT $$ push "$(pwd)" 2> /dev/null)
                 if [ "$output" == "OK" ]; then
                     # Change directory to the retrieved path
-                    cd "$dir" || _error "Failed to navigate to $dir"
+                    cd "$dir" || _nav_error "Failed to navigate to $dir"
                 else
-                    _error "Failed to push current directory to action stack"
+                    _nav_error "Failed to push current directory to action stack"
                 fi
             fi
             ;;
