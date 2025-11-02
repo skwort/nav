@@ -2,7 +2,7 @@
  * @file tag.h
  * @brief Tag list node storage and utility functions
  *
- * This header defines the `struct tag`, which stores the entries for the 
+ * This header defines the `struct tag`, which stores the entries for the
  * tag list, and the associated struct list comparison and cleanup functions.
  */
 

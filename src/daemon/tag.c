@@ -19,8 +19,9 @@ int compare_tag_tag(void *data, void *key)
 {
     struct tag *tag = (struct tag *)data;
 
-    if (strcmp(tag->tag, key) == 0)
+    if (strcmp(tag->tag, key) == 0) {
         return 0;
+    }
 
     return 1;
 }
@@ -49,8 +50,9 @@ int read_tag_file(struct list *tags, char *path)
     }
 
     while (fgets(line, sizeof(line), f)) {
-        if (strcmp(line, "\n") == 0)
+        if (strcmp(line, "\n") == 0) {
             break;
+        }
 
         saveptr = NULL;
 
@@ -90,7 +92,7 @@ int read_tag_file(struct list *tags, char *path)
             continue;
         }
 
-        tag_data = (struct tag*)malloc(sizeof(struct tag));
+        tag_data = (struct tag *)malloc(sizeof(struct tag));
         if (tag_data == NULL) {
             LOG_ERR("tag data malloc create failed");
             free(tag);

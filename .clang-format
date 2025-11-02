@@ -1,0 +1,23 @@
+BasedOnStyle: LLVM
+AlignConsecutiveMacros: AcrossComments
+AllowShortBlocksOnASingleLine: Never
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortEnumsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+BitFieldColonSpacing: After
+BreakBeforeBraces: Linux
+ColumnLimit: 80
+ConstructorInitializerIndentWidth: 4
+ContinuationIndentWidth: 4
+IndentCaseLabels: false
+IndentGotoLabels: false
+IndentWidth: 4
+UseTab: Never
+InsertBraces: true
+InsertNewlineAtEOF: true
+SpaceBeforeInheritanceColon: False
+SpaceBeforeParens: ControlStatementsExceptControlMacros
+SortIncludes: Never
+

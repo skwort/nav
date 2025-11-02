@@ -1,6 +1,6 @@
 /**
  * @file list.c
- * @brief List ADT implementation 
+ * @brief List ADT implementation
  *
  * This file provides the implementation of the singly-linked list ADT.
  */
@@ -12,8 +12,9 @@
 int list_node_create(struct node **n)
 {
     *n = malloc(sizeof(struct node));
-    if (*n == NULL)
+    if (*n == NULL) {
         return 1;
+    }
 
     (*n)->next = NULL;
     return 0;
@@ -25,11 +26,11 @@ int list_append_node(struct list *l, struct node *n)
     if (l->head == NULL) {
         l->head = n;
         l->n_items++;
-        return 0; 
+        return 0;
     }
 
     /* non-empty list */
-    struct node* curr = l->head;
+    struct node *curr = l->head;
     for (; curr != NULL; curr = curr->next) {
         if (curr->next == NULL) {
             curr->next = n;
@@ -47,11 +48,11 @@ int list_prepend_node(struct list *l, struct node *n)
     if (l->head == NULL) {
         l->head = n;
         l->n_items++;
-        return 0; 
+        return 0;
     }
 
     /* non-empty list */
-    n->next = l->head; 
+    n->next = l->head;
     l->head = n;
     l->n_items++;
 
@@ -82,8 +83,9 @@ int list_delete_node(struct list *l, void *key)
     prev = NULL;
     for (; curr != NULL; curr = curr->next) {
         if (!l->compare_func(curr->data, key)) {
-            if (prev)
+            if (prev) {
                 prev->next = curr->next;
+            }
 
             l->cleanup_func(curr->data);
             free(curr);
@@ -120,21 +122,24 @@ int list_delete_all(struct list *l)
 
 struct node *list_get_node(struct list *l, void *key)
 {
-    struct node* curr;
+    struct node *curr;
 
     /* empty list */
-    if (l->head == NULL)
+    if (l->head == NULL) {
         return NULL;
+    }
 
     /* first item */
-    if (!l->compare_func(l->head->data, key))
+    if (!l->compare_func(l->head->data, key)) {
         return l->head;
+    }
 
     /* not first item */
     for (curr = l->head; curr != NULL; curr = curr->next) {
-        if (!l->compare_func(curr->data, key))
+        if (!l->compare_func(curr->data, key)) {
             return curr;
+        }
     }
-    
+
     return NULL;
 }

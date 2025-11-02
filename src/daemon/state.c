@@ -2,12 +2,11 @@
  * @file state.c
  * @brief Implementation of global state management for navd.
  *
- * This file provides the implementation for managing the global state of 
- * the navd daemon. It defines functions for initialising, deinitialising, 
+ * This file provides the implementation for managing the global state of
+ * the navd daemon. It defines functions for initialising, deinitialising,
  * and retrieving the singleton state.
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
@@ -16,7 +15,7 @@
 #include "list.h"
 #include "log.h"
 
-/** 
+/**
  * @brief Static instance of the global state.
  *
  * This variable holds the singleton instance of the global state, ensuring
@@ -33,7 +32,7 @@ int init_state(void)
             return 1;
         }
 
-        /* Set default state values */ 
+        /* Set default state values */
         memset(singleton_state->rootdir, 0, sizeof(singleton_state->rootdir));
         memset(singleton_state->nav_path, 0, PATH_MAX);
         memset(singleton_state->tagfile_path, 0, PATH_MAX);
@@ -43,13 +42,13 @@ int init_state(void)
         /* Setup shell list */
         singleton_state->shells.head = NULL;
         singleton_state->shells.n_items = 0;
-        singleton_state->shells.compare_func= NULL;
+        singleton_state->shells.compare_func = NULL;
         singleton_state->shells.cleanup_func = NULL;
 
         /* Setup tag list */
         singleton_state->tags.head = NULL;
         singleton_state->tags.n_items = 0;
-        singleton_state->tags.compare_func= NULL;
+        singleton_state->tags.compare_func = NULL;
         singleton_state->tags.cleanup_func = NULL;
 
         return 0;

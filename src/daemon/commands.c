@@ -3,7 +3,7 @@
  * @brief Command dispatching and handling functionality.
  *
  * This file contains the implementation of the command dispatching mechanism.
- * It provides functions to register and unregister shells, as well as a 
+ * It provides functions to register and unregister shells, as well as a
  * dispatch function that matches command strings to the appropriate handlers.
  *
  */
@@ -24,7 +24,7 @@
 /**
  * @brief Enum representing the available commands.
  *
- * This enum is used to index the command table and map command strings 
+ * This enum is used to index the command table and map command strings
  * to their corresponding functions.
  */
 enum commands {
@@ -68,16 +68,11 @@ struct command {
 };
 
 const struct command cmd_table[] = {
-    {"register", cmd_register},
-    {"unregister", cmd_unregister},
-    {"add", cmd_add},
-    {"delete", cmd_delete},
-    {"show", cmd_show},
-    {"get", cmd_get},
-    {"push", cmd_push},
-    {"pop", cmd_pop},
-    {"actions", cmd_actions},
-    {"list", cmd_list},
+    {"register", cmd_register}, {"unregister", cmd_unregister},
+    {"add", cmd_add},           {"delete", cmd_delete},
+    {"show", cmd_show},         {"get", cmd_get},
+    {"push", cmd_push},         {"pop", cmd_pop},
+    {"actions", cmd_actions},   {"list", cmd_list},
     {"reset", cmd_reset},
 };
 
@@ -112,7 +107,7 @@ static void cmd_register(int pid, char *args)
     struct state *state;
     struct shell *shell_data;
     struct node *shell_node;
-    
+
     state = get_state();
 
     LOG_INF("shell at PID=%d wants to register", pid);
@@ -123,8 +118,8 @@ static void cmd_register(int pid, char *args)
 
         shell_data = (struct shell *)shell_node->data;
         sendto(state->sfd, "OK\n", 4, 0,
-            (struct sockaddr *)&shell_data->sock_addr,
-            sizeof(shell_data->sock_addr));
+               (struct sockaddr *)&shell_data->sock_addr,
+               sizeof(shell_data->sock_addr));
 
         return;
     }
@@ -142,8 +137,8 @@ static void cmd_register(int pid, char *args)
 
     shell_data->pid = pid;
     shell_data->sock_addr.sun_family = AF_UNIX;
-    snprintf(shell_data->sock_addr.sun_path, 108,
-        "%s/%d.sock", state->rootdir, pid); 
+    snprintf(shell_data->sock_addr.sun_path, 108, "%s/%d.sock", state->rootdir,
+             pid);
 
     /* Initialise the action stack */
     shell_data->actions.head = NULL;
@@ -155,8 +150,7 @@ static void cmd_register(int pid, char *args)
     list_append_node(&state->shells, shell_node);
 
     /* Send registration message */
-    sendto(state->sfd, "OK\n", 4, 0,
-           (struct sockaddr *)&shell_data->sock_addr,
+    sendto(state->sfd, "OK\n", 4, 0, (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
 
     LOG_INF("shell %d registered", pid);
@@ -198,8 +192,7 @@ static void cmd_unregister(int pid, char *args)
     }
 
     LOG_INF("shell %d unregistered", pid);
-    sendto(state->sfd, "OK\n", 3, 0,
-           (struct sockaddr *)&shell_addr,
+    sendto(state->sfd, "OK\n", 3, 0, (struct sockaddr *)&shell_addr,
            sizeof(shell_addr));
 }
 
@@ -224,10 +217,11 @@ static void cmd_add(int pid, char *args)
     shell_data = (struct shell *)shell_node->data;
 
     /* Extract args */
-    for (j = 1, line = args; ; j++, line = NULL) {
+    for (j = 1, line = args;; j++, line = NULL) {
         token = strtok_r(line, " ", &saveptr);
-        if (token == NULL)
+        if (token == NULL) {
             break;
+        }
 
         if (j == 1) {
             tag = strndup(token, get_trailing_whitespace(token));
@@ -263,7 +257,7 @@ static void cmd_add(int pid, char *args)
         goto freeargs;
     }
 
-    tag_data = (struct tag*)malloc(sizeof(struct tag));
+    tag_data = (struct tag *)malloc(sizeof(struct tag));
     if (tag_data == NULL) {
         LOG_ERR("tag data malloc create failed");
         goto freeargs;
@@ -279,8 +273,7 @@ end:
 
     write_tag_file(&state->tags, state->tagfile_path);
 
-    sendto(state->sfd, "OK\n", 3, 0,
-           (struct sockaddr *)&shell_data->sock_addr,
+    sendto(state->sfd, "OK\n", 3, 0, (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
     return;
 
@@ -288,8 +281,7 @@ freeargs:
     free(tag);
     free(path);
 
-    sendto(state->sfd, "BAD\n", 4, 0,
-           (struct sockaddr *)&shell_data->sock_addr,
+    sendto(state->sfd, "BAD\n", 4, 0, (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
     return;
 }
@@ -321,20 +313,20 @@ static void cmd_delete(int pid, char *args)
 
     tag = strndup(token, get_trailing_whitespace(token));
 
-   /* Check if tag exists */
+    /* Check if tag exists */
     tag_node = list_get_node(&state->tags, tag);
     if (tag_node == NULL) {
         LOG_INF("Tag '%s' does not exist.", tag);
         sendto(state->sfd, "BAD\n", 4, 0,
-            (struct sockaddr *)&shell_data->sock_addr,
-            sizeof(shell_data->sock_addr));
+               (struct sockaddr *)&shell_data->sock_addr,
+               sizeof(shell_data->sock_addr));
     } else {
         list_delete_node(&state->tags, tag);
         LOG_INF("Tag '%s' deleted.", tag);
         write_tag_file(&state->tags, state->tagfile_path);
         sendto(state->sfd, "OK\n", 3, 0,
-            (struct sockaddr *)&shell_data->sock_addr,
-            sizeof(shell_data->sock_addr));
+               (struct sockaddr *)&shell_data->sock_addr,
+               sizeof(shell_data->sock_addr));
     }
 
     free(tag);
@@ -350,7 +342,7 @@ static void cmd_show(int pid, char *args)
     struct tag *tag_data;
     char buf[2048] = {0};
     int offset = 0;
-    
+
     state = get_state();
 
     shell_node = list_get_node(&state->shells, &pid);
@@ -365,8 +357,8 @@ static void cmd_show(int pid, char *args)
     while (tag_node != NULL) {
         tag_data = (struct tag *)tag_node->data;
 
-        offset += snprintf(buf + offset,  sizeof(buf) - offset, "%s --> %s\n", tag_data->tag,
-                          tag_data->path);
+        offset += snprintf(buf + offset, sizeof(buf) - offset, "%s --> %s\n",
+                           tag_data->tag, tag_data->path);
         tag_node = tag_node->next;
     }
 
@@ -384,7 +376,7 @@ static void cmd_list(int pid, char *args)
     struct tag *tag_data;
     char buf[256] = {0};
     int offset = 0;
-    
+
     state = get_state();
 
     shell_node = list_get_node(&state->shells, &pid);
@@ -398,15 +390,15 @@ static void cmd_list(int pid, char *args)
     tag_node = state->tags.head;
     while (tag_node != NULL) {
         tag_data = (struct tag *)tag_node->data;
-        offset += sprintf(buf + offset,  "%s ", tag_data->tag);
+        offset += sprintf(buf + offset, "%s ", tag_data->tag);
         tag_node = tag_node->next;
     }
 
-    if (offset > 0)
+    if (offset > 0) {
         buf[offset - 1] = 0;
+    }
 
-    sendto(state->sfd, buf, 256, 0,
-           (struct sockaddr *)&shell_data->sock_addr,
+    sendto(state->sfd, buf, 256, 0, (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
 }
 
@@ -420,7 +412,7 @@ static void cmd_get(int pid, char *args)
     struct shell *shell_data;
     struct tag *tag_data;
     char buf[100] = {0};
-    
+
     state = get_state();
 
     shell_node = list_get_node(&state->shells, &pid);
@@ -444,14 +436,14 @@ static void cmd_get(int pid, char *args)
     if (tag_node == NULL) {
         LOG_INF("Tag '%s' does not exist.", tag);
         sendto(state->sfd, "BAD\n", 4, 0,
-            (struct sockaddr *)&shell_data->sock_addr,
-            sizeof(shell_data->sock_addr));
+               (struct sockaddr *)&shell_data->sock_addr,
+               sizeof(shell_data->sock_addr));
     } else {
         tag_data = (struct tag *)tag_node->data;
-        sprintf(buf,  "%s\n", tag_data->path);
+        sprintf(buf, "%s\n", tag_data->path);
         sendto(state->sfd, buf, strlen(buf), 0,
-            (struct sockaddr *)&shell_data->sock_addr,
-            sizeof(shell_data->sock_addr));
+               (struct sockaddr *)&shell_data->sock_addr,
+               sizeof(shell_data->sock_addr));
     }
 
     free(tag);
@@ -466,7 +458,7 @@ static void cmd_push(int pid, char *args)
     struct shell *shell_data;
     struct node *action_node;
     struct action *action_data;
-    
+
     state = get_state();
 
     shell_node = list_get_node(&state->shells, &pid);
@@ -476,12 +468,14 @@ static void cmd_push(int pid, char *args)
     }
     shell_data = (struct shell *)shell_node->data;
 
-    if (args == NULL)
+    if (args == NULL) {
         return;
+    }
 
     action = strndup(args, get_trailing_whitespace(args));
-    if (!valid_path(action))
+    if (!valid_path(action)) {
         goto free;
+    }
 
     /* Reject immediate duplicate actions */
     if (shell_data->actions.head != NULL) {
@@ -510,15 +504,13 @@ static void cmd_push(int pid, char *args)
     list_prepend_node(&shell_data->actions, action_node);
 
 ok:
-    sendto(state->sfd, "OK\n", 4, 0,
-        (struct sockaddr *)&shell_data->sock_addr,
-        sizeof(shell_data->sock_addr));
+    sendto(state->sfd, "OK\n", 4, 0, (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
     return;
 
 free:
-    sendto(state->sfd, "BAD\n", 4, 0,
-        (struct sockaddr *)&shell_data->sock_addr,
-        sizeof(shell_data->sock_addr));
+    sendto(state->sfd, "BAD\n", 4, 0, (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
     free(action);
     return;
 }
@@ -550,7 +542,7 @@ static void cmd_pop(int pid, char *args)
     }
     action_data = (struct action *)action_node->data;
 
-    sprintf(buf,  "%s\n", action_data->path);
+    sprintf(buf, "%s\n", action_data->path);
     sendto(state->sfd, buf, strlen(buf), 0,
            (struct sockaddr *)&shell_data->sock_addr,
            sizeof(shell_data->sock_addr));
@@ -570,7 +562,7 @@ static void cmd_actions(int pid, char *args)
     char buf[1024] = {0};
     int i;
     int offset = 0;
-    
+
     state = get_state();
 
     shell_node = list_get_node(&state->shells, &pid);
@@ -584,7 +576,7 @@ static void cmd_actions(int pid, char *args)
     action_node = shell_data->actions.head;
     while (action_node != NULL) {
         action_data = (struct action *)action_node->data;
-        offset += sprintf(buf + offset,  "    %d. %s\n", i, action_data->path);
+        offset += sprintf(buf + offset, "    %d. %s\n", i, action_data->path);
         action_node = action_node->next;
         i++;
     }
@@ -611,9 +603,7 @@ static void cmd_reset(int pid, char *args)
 
     list_delete_all(&shell_data->actions);
 
-    sendto(state->sfd, "OK\n", 4, 0,
-        (struct sockaddr *)&shell_data->sock_addr,
-        sizeof(shell_data->sock_addr));
+    sendto(state->sfd, "OK\n", 4, 0, (struct sockaddr *)&shell_data->sock_addr,
+           sizeof(shell_data->sock_addr));
     return;
-
 }

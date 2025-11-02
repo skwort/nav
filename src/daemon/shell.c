@@ -42,8 +42,9 @@ int compare_action_path(void *data, void *key)
     struct action *a = (struct action *)data;
     char *path = (char *)key;
 
-    if (!strcmp(a->path, path))
+    if (!strcmp(a->path, path)) {
         return 0;
+    }
 
     return 1;
 }

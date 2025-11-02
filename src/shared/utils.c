@@ -19,7 +19,7 @@
 char *get_username(void)
 {
     uid_t uid;
-    struct passwd* pwd;
+    struct passwd *pwd;
 
     uid = getuid();
     pwd = getpwuid(uid);
@@ -37,8 +37,9 @@ int get_trailing_whitespace(char *s)
     char *p = s;
 
     while (p != NULL) {
-        if (*p == '\n' || *p == ' ')
+        if (*p == '\n' || *p == ' ') {
             break;
+        }
         i++;
         p++;
     }

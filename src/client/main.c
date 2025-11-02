@@ -18,7 +18,7 @@ static struct sockaddr_un my_addr;
 static struct sockaddr_un nav_addr;
 static char rootdir[64] = {0};
 
-static void sigint_handler(int signo, siginfo_t *info, void* context)
+static void sigint_handler(int signo, siginfo_t *info, void *context)
 {
     if (strlen(my_addr.sun_path) > 0) {
         unlink(my_addr.sun_path);
@@ -35,7 +35,7 @@ void register_handlers(void)
     sigaction(SIGINT, &sa, NULL);
 }
 
-static void process_command(int argc, char** argv)
+static void process_command(int argc, char **argv)
 {
     char buf[1024] = {0};
     int offset = 0;
@@ -43,7 +43,7 @@ static void process_command(int argc, char** argv)
     char **ptr = argv;
 
     while (*ptr != NULL) {
-        offset += sprintf(buf + offset,  "%s ", *ptr);
+        offset += sprintf(buf + offset, "%s ", *ptr);
         ptr++;
     }
 
@@ -79,7 +79,7 @@ void setup_socket(char *pid)
 
     /* Set 0.05 second timeout on receive */
     timeval.tv_sec = 0;
-    timeval.tv_usec = 50000; 
+    timeval.tv_usec = 50000;
     err = setsockopt(sfd, SOL_SOCKET, SO_RCVTIMEO, &timeval, sizeof(timeval));
     if (err == -1) {
         LOG_ERR("setsockopt: %s", strerror(errno));
@@ -90,7 +90,7 @@ void setup_socket(char *pid)
     my_addr.sun_family = AF_UNIX;
     snprintf(my_addr.sun_path, 108, "%s/%s.sock", rootdir, pid);
 
-    err = bind(sfd, (struct sockaddr *) &my_addr, sizeof(my_addr));
+    err = bind(sfd, (struct sockaddr *)&my_addr, sizeof(my_addr));
     if (err == -1) {
         LOG_ERR("bind: %s", strerror(errno));
         close(sfd);
@@ -112,24 +112,23 @@ void setup_socket(char *pid)
 void print_usage(const char *program_name)
 {
     printf("Usage: %s [options] <command> [arguments]\n", program_name);
-    printf(
-        "Options:\n"
-        "  -d <directory>    Specify the directory to use.\n"
-        "  -v                Print version.\n"
-        "\n"
-        "Note: A PID must prefix all commands shown below. Use $$ in bash.\n"
-        "\n"
-        "Commands:\n"
-        "  get [tag]         Retrieve the path for the the specified tag.\n"
-        "  add [tag] [path]  Add a new tag-path association.\n"
-        "  delete [tag]      Remove the specified tag.\n"
-        "  show              Show all tag-path associations.\n"
-        "  push              Save an action to the the action stack.\n"
-        "  pop               Get the last action from the action stack.\n"
-        "  actions           List all recorded actions.\n");
+    printf("Options:\n"
+           "  -d <directory>    Specify the directory to use.\n"
+           "  -v                Print version.\n"
+           "\n"
+           "Note: A PID must prefix all commands shown below. Use $$ in bash.\n"
+           "\n"
+           "Commands:\n"
+           "  get [tag]         Retrieve the path for the the specified tag.\n"
+           "  add [tag] [path]  Add a new tag-path association.\n"
+           "  delete [tag]      Remove the specified tag.\n"
+           "  show              Show all tag-path associations.\n"
+           "  push              Save an action to the the action stack.\n"
+           "  pop               Get the last action from the action stack.\n"
+           "  actions           List all recorded actions.\n");
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     int opt;
     char *uname;
@@ -155,8 +154,9 @@ int main(int argc, char** argv)
 
     /* Setup root directory */
     if (strlen(rootdir) > 0) {
-        if (!valid_path(rootdir))
+        if (!valid_path(rootdir)) {
             exit(EXIT_FAILURE);
+        }
     } else {
         uname = get_username();
         if (uname == NULL) {
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
     LOG_INF("Using root nav directory '%s'", rootdir);
 
     register_handlers();
-    setup_socket(argv[optind]);    
+    setup_socket(argv[optind]);
 
     argc -= optind;
     argv += optind;

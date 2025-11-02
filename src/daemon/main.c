@@ -19,7 +19,7 @@
 #include "tag.h"
 #include "utils.h"
 
-void handler(int signo, siginfo_t *info, void* context)
+void handler(int signo, siginfo_t *info, void *context)
 {
     struct state *state = get_state();
 
@@ -148,7 +148,7 @@ static void setup_socket(struct state *state)
     /* Bind socket, setting default dest addr */
     nav_addr.sun_family = AF_UNIX;
     memcpy(nav_addr.sun_path, state->nav_path, 108);
-    err = bind(state->sfd, (struct sockaddr *) &nav_addr, sizeof(nav_addr));
+    err = bind(state->sfd, (struct sockaddr *)&nav_addr, sizeof(nav_addr));
     if (err == -1) {
         LOG_ERR("bind: %s", strerror(errno));
         exit(EXIT_FAILURE);
@@ -158,13 +158,12 @@ static void setup_socket(struct state *state)
 void print_usage(const char *program_name)
 {
     printf("Usage: %s [options] <command> [arguments]\n", program_name);
-    printf(
-        "Options:\n"
-        "  -d <directory>    Specify the directory to use.\n"
-        "  -v                Print version.\n");
+    printf("Options:\n"
+           "  -d <directory>    Specify the directory to use.\n"
+           "  -v                Print version.\n");
 }
 
-static void parse_args(int argc, char** argv, char **dir)
+static void parse_args(int argc, char **argv, char **dir)
 {
     int opt;
 
@@ -183,7 +182,7 @@ static void parse_args(int argc, char** argv, char **dir)
     }
 }
 
-int main(int argc, char** argv)
+int main(int argc, char **argv)
 {
     struct state *state;
     char *rootdir = NULL;

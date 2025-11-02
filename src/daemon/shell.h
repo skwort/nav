@@ -3,7 +3,7 @@
  * @brief Shell node state storage and utility functions.
  *
  * This header defines the `struct shell` used to store state for each shell in
- * the shell list. It also provides function declarations for comparing shell 
+ * the shell list. It also provides function declarations for comparing shell
  * nodes by PID and for cleaning up shell data.
  */
 
@@ -50,7 +50,7 @@ int compare_shell_pid(void *data, void *key);
 /**
  * @brief Cleans up and deallocates memory for a shell node.
  *
- * This function frees the memory associated with a shell node. It is used as a 
+ * This function frees the memory associated with a shell node. It is used as a
  * cleanup function when removing shell nodes from the list.
  *
  * @param data Pointer to the `struct shell` to be cleaned up.
