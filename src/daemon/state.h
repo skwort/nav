@@ -13,20 +13,33 @@
 #include <limits.h>
 #include "list.h"
 
-#define ROOTDIR_LEN 64
+/* The socket path is cache_dir/<pid>.sock where pid could be could be some
+ * integer up to 2^22 (7 byte string). The upper limit on socket paths is
+ * constrained by the `sun_path` character array of 108 bytes.
+ *
+ * Therefore, our maximum cache_dir length is:
+ *   108 - (7 + 6) = 95
+ */
+#define CACHE_DIR_MAX_LEN   95
+#define SOCKET_PATH_MAX_LEN 108
 
 /**
  * @brief Structure representing the global state of navd.
  */
 struct state {
-    char rootdir[ROOTDIR_LEN];
-    char nav_path[PATH_MAX];
-    char tagfile_path[PATH_MAX];
-    char *uname;
-    int sfd;
 
-    struct list shells;
-    struct list tags;
+    char config_dir[PATH_MAX - 5];
+    char cache_dir[CACHE_DIR_MAX_LEN];
+
+    char nav_socket_path[SOCKET_PATH_MAX_LEN]; /**<< Location of the server
+                                                  socket file */
+    char tagfile_path[PATH_MAX];               /**<< Location of the tag-file */
+
+    char *uname; /**<< The user who owns this daemon process */
+    int sfd;     /**<< File descriptor for the server socket */
+
+    struct list shells; /**<< List of all registered shells */
+    struct list tags;   /**<< List of all known tags */
 };
 
 /**

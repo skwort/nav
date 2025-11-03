@@ -33,9 +33,14 @@ int init_state(void)
         }
 
         /* Set default state values */
-        memset(singleton_state->rootdir, 0, sizeof(singleton_state->rootdir));
-        memset(singleton_state->nav_path, 0, PATH_MAX);
-        memset(singleton_state->tagfile_path, 0, PATH_MAX);
+        memset(singleton_state->config_dir, 0,
+               sizeof(singleton_state->config_dir));
+        memset(singleton_state->cache_dir, 0,
+               sizeof(singleton_state->cache_dir));
+        memset(singleton_state->nav_socket_path, 0,
+               sizeof(singleton_state->nav_socket_path));
+        memset(singleton_state->tagfile_path, 0,
+               sizeof(singleton_state->tagfile_path));
         singleton_state->uname = NULL;
         singleton_state->sfd = -1;
 

@@ -12,11 +12,16 @@
 #include "utils.h"
 #include "log.h"
 
+#define CACHE_DIR_ENV_VAR   "NAV_CACHE_DIR"
+#define DEFAULT_CACHE_DIR   "/home/%s/.cache/nav"
+#define DEFAULT_SOCKET_FILE "nav.sock"
+
 /* Global state variables */
 static int sfd;
 static struct sockaddr_un my_addr;
 static struct sockaddr_un nav_addr;
-static char rootdir[64] = {0};
+
+static char cache_dir[95] = {0};
 
 static void sigint_handler(int signo, siginfo_t *info, void *context)
 {
@@ -88,7 +93,7 @@ void setup_socket(char *pid)
     }
 
     my_addr.sun_family = AF_UNIX;
-    snprintf(my_addr.sun_path, 108, "%s/%s.sock", rootdir, pid);
+    snprintf(my_addr.sun_path, 108, "%s/%s.sock", cache_dir, pid);
 
     err = bind(sfd, (struct sockaddr *)&my_addr, sizeof(my_addr));
     if (err == -1) {
@@ -98,7 +103,7 @@ void setup_socket(char *pid)
     }
 
     nav_addr.sun_family = AF_UNIX;
-    snprintf(nav_addr.sun_path, 108, "%s/nav.sock", rootdir);
+    snprintf(nav_addr.sun_path, 108, "%s/nav.sock", cache_dir);
 
     err = connect(sfd, (struct sockaddr *)&nav_addr, sizeof(nav_addr));
     if (err == -1) {
@@ -113,7 +118,6 @@ void print_usage(const char *program_name)
 {
     printf("Usage: %s [options] <command> [arguments]\n", program_name);
     printf("Options:\n"
-           "  -d <directory>    Specify the directory to use.\n"
            "  -v                Print version.\n"
            "\n"
            "Note: A PID must prefix all commands shown below. Use $$ in bash.\n"
@@ -131,13 +135,12 @@ void print_usage(const char *program_name)
 int main(int argc, char **argv)
 {
     int opt;
+    int err;
     char *uname;
+    char *temp_env;
 
     while ((opt = getopt(argc, argv, "vd:")) != -1) {
         switch (opt) {
-        case 'd':
-            strncpy(rootdir, optarg, sizeof(rootdir));
-            break;
         case 'v':
             printf("nav client version 0\n");
             exit(EXIT_SUCCESS);
@@ -152,20 +155,28 @@ int main(int argc, char **argv)
         exit(EXIT_FAILURE);
     }
 
-    /* Setup root directory */
-    if (strlen(rootdir) > 0) {
-        if (!valid_path(rootdir)) {
-            exit(EXIT_FAILURE);
+    temp_env = getenv(CACHE_DIR_ENV_VAR);
+    if (temp_env) {
+        /* Check for truncation */
+        if (strlen(temp_env) >= sizeof(cache_dir)) {
+            LOG_ERR("Path too long for cache dir: '%s'", temp_env);
+            return -1;
         }
+        strncpy(cache_dir, temp_env, sizeof(cache_dir));
+        cache_dir[sizeof(cache_dir) - 1] = '\0';
     } else {
         uname = get_username();
         if (uname == NULL) {
             LOG_ERR("Invalid user.");
             exit(EXIT_FAILURE);
         }
-        sprintf(rootdir, "/home/%s/.nav", uname);
+        err = snprintf(cache_dir, sizeof(cache_dir), DEFAULT_CACHE_DIR, uname);
+        if (err >= sizeof(cache_dir) || err < 0) {
+            LOG_ERR("Failed to format default path for cache dir");
+            return -1;
+        }
     }
-    LOG_INF("Using root nav directory '%s'", rootdir);
+    LOG_INF("Using cache directory '%s'", cache_dir);
 
     register_handlers();
     setup_socket(argv[optind]);

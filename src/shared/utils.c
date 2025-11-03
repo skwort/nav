@@ -12,6 +12,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <pwd.h>
+#include <string.h>
 
 #include "utils.h"
 #include "log.h"

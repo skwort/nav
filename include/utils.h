@@ -1,6 +1,6 @@
 /**
  * @file utils.h
- * @brief Utility functions 
+ * @brief Utility functions
  *
  * This header defines general purpose utility functions used across the
  * project.
@@ -50,3 +50,4 @@ int get_trailing_whitespace(char *s);
 bool valid_path(char *path);
 
 #endif /* UTILS_H_ */
+

@@ -1,11 +1,12 @@
-import pytest
-import subprocess
-import signal
-import time
-import string
+import os
 import random
 import shutil
-import os
+import signal
+import string
+import subprocess
+import time
+
+import pytest
 
 DAEMON_TARGET = "daemon"
 CLIENT_TARGET = "client"
@@ -15,9 +16,11 @@ CLIENT_PATH = "./build/client"
 
 NAV_ROOT = "/tmp/nav-" + "".join(random.choices(string.ascii_letters, k=6))
 
+ENV = {"NAV_CACHE_DIR": NAV_ROOT, "NAV_CONFIG_DIR": NAV_ROOT}
+
 
 def make_clean():
-    result = subprocess.run(['make', 'clean'], capture_output=True, text=True)
+    result = subprocess.run(["make", "clean"], capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError("Build failed:\n" + result.stderr)
     return
@@ -26,7 +29,7 @@ def make_clean():
 @pytest.fixture(scope="session", autouse=True)
 def build_all():
     make_clean()
-    result = subprocess.run(['make', 'all'], capture_output=True, text=True)
+    result = subprocess.run(["make", "all"], capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError("Build failed:\n" + result.stderr)
     return
@@ -35,14 +38,13 @@ def build_all():
 @pytest.fixture()
 def daemon():
     # Start the daemon process in the background
-    process = subprocess.Popen([DAEMON_PATH, "-d", NAV_ROOT],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        [DAEMON_PATH], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ENV
+    )
 
     time.sleep(0.001)
     if process.poll() is not None:
-        raise RuntimeError("Daemon launch failed:\n" +
-                           process.stderr.read().decode())
+        raise RuntimeError("Daemon launch failed:\n" + process.stderr.read().decode())
 
     # Yield control back to the test
     yield process
@@ -66,14 +68,13 @@ def daemon_preloaded_tag():
         tagfile.write("\n")
 
     # Start the daemon process in the background
-    process = subprocess.Popen([DAEMON_PATH, "-d", NAV_ROOT],
-                               stdout=subprocess.PIPE,
-                               stderr=subprocess.PIPE)
+    process = subprocess.Popen(
+        [DAEMON_PATH], stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=ENV
+    )
 
     time.sleep(0.001)
     if process.poll() is not None:
-        raise RuntimeError("Daemon launch failed:\n" +
-                           process.stderr.read().decode())
+        raise RuntimeError("Daemon launch failed:\n" + process.stderr.read().decode())
 
     # Yield control back to the test
     yield process
@@ -94,9 +95,12 @@ def test_unregister_not_registered(daemon):
     return value.
     """
     pid = "123456"
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 1
 
@@ -106,16 +110,16 @@ def test_register_unregister(daemon):
     Test registering and unregistering a client with the daemon.
     """
     pid = "123456"
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "register"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
@@ -129,33 +133,42 @@ def test_tags_add_get_show_delete(daemon):
     pid = "123456"
 
     # Register with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "register"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Add test --> /tmp/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "add", "test", "/tmp/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "add", "test", "/tmp/"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Get test --> /tmp/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "get", "test"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "get", "test"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "/tmp/"
 
     # Show tags
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "show"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "show"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "test --> /tmp/"
@@ -167,19 +180,19 @@ def test_tags_add_get_show_delete(daemon):
 
         line = tagfile.readline()
         assert line == "\n", "Missing newline at end of file"
-    
+
     # Delete test --> /tmp/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "delete", "test"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "delete", "test"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Check that test is deleted
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "get", "test"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "get", "test"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "BAD"
@@ -190,9 +203,9 @@ def test_tags_add_get_show_delete(daemon):
         assert line == "\n", "Missing newline at end of file"
 
     # Unregister with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
@@ -205,33 +218,33 @@ def test_preloaded_tagfile(daemon_preloaded_tag):
     pid = "123456"
 
     # Register with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "register"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Get test --> /tmp/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "get", "test"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "get", "test"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "/tmp/"
 
     # Show tags
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "show"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "show"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "test --> /tmp/"
 
     # Unregister with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
@@ -244,57 +257,57 @@ def test_action_stack(daemon):
     pid = "123456"
 
     # Register with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "register"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Push /tmp/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "push", "/tmp/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "push", "/tmp/"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Push /home/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "push", "/home/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "push", "/home/"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Pop
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "pop"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "pop"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "/home/"
 
     # Pop
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "pop"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "pop"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "/tmp/"
 
     # Empty pop
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "pop"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "pop"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "BAD"
 
     # Unregister with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
@@ -307,57 +320,57 @@ def test_action_reset(daemon):
     pid = "123456"
 
     # Register with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "register"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Push /tmp/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "push", "/tmp/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "push", "/tmp/"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Push /home/
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "push", "/home/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "push", "/home/"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # List actions
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "actions"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "actions"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert all(path in client.stdout for path in ["/home/", "/tmp/"])
 
     # Reset
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "reset"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "reset"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # List actions
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "actions"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "actions"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == ""
 
     # Unregister with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
@@ -371,48 +384,57 @@ def test_tags_list(daemon):
     pid = "123456"
 
     # Register with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "register"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Add one
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "add", "one", "/tmp/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "add", "one", "/tmp/"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # Add three
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "add", "two", "/tmp/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "add", "two", "/tmp/"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "add", "three", "/tmp/"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "add", "three", "/tmp/"],
+        capture_output=True,
+        text=True,
+        env=ENV,
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"
 
     # List the tags
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "list"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "list"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "one two three"
 
     # Unregister with daemon
-    client = subprocess.run([CLIENT_PATH, "-d", NAV_ROOT, pid,
-                             "unregister"],
-                            capture_output=True, text=True)
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
 
     assert client.returncode == 0
     assert client.stdout.strip() == "OK"

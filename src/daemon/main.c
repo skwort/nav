@@ -19,12 +19,25 @@
 #include "tag.h"
 #include "utils.h"
 
+/* The maximum size of the socket paths. This value is limited by the size of
+ * sockaddr_un->sun_path . */
+#define SOCKADDR_PATH_MAX sizeof(((struct sockaddr_un *)0)->sun_path)
+
+#define CONFIG_DIR_ENV_VAR "NAV_CONFIG_DIR"
+#define CACHE_DIR_ENV_VAR  "NAV_CACHE_DIR"
+
+#define DEFAULT_CONFIG_DIR  "/home/%s/.config/nav"
+#define DEFAULT_CACHE_DIR   "/home/%s/.cache/nav"
+#define DEFAULT_SOCKET_FILE "nav.sock"
+#define DEFAULT_TAG_FILE    "tags"
+
 void handler(int signo, siginfo_t *info, void *context)
 {
     struct state *state = get_state();
 
-    if (strlen(state->nav_path) > 0) {
-        unlink(state->nav_path);
+    /* Remove the nav socket file on shutdown */
+    if (strlen(state->nav_socket_path) > 0) {
+        unlink(state->nav_socket_path);
     }
 
     deinit_state();
@@ -70,10 +83,52 @@ void loop(struct state *state)
     }
 }
 
-static inline void setup_initial_state(struct state *state, char *rootdir)
+static int setup_directory(char *dest, size_t dest_size, const char *env_var,
+                           const char *default_fmt, const char *username,
+                           const char *dir_name)
 {
     int err;
     struct stat sb;
+    char *temp_env;
+
+    /* Extract from environment or use default */
+    temp_env = getenv(env_var);
+    if (temp_env) {
+        /* Check for truncation */
+        if (strlen(temp_env) >= dest_size) {
+            LOG_ERR("Path too long for %s: '%s'", dir_name, temp_env);
+            return -1;
+        }
+        strncpy(dest, temp_env, dest_size);
+        dest[dest_size - 1] = '\0';
+    } else {
+        err = snprintf(dest, dest_size, default_fmt, username);
+        if (err >= (int)dest_size || err < 0) {
+            LOG_ERR("Failed to format default path for %s", dir_name);
+            return -1;
+        }
+    }
+
+    LOG_INF("Loaded %s '%s'", dir_name, dest);
+
+    /* Create the directory if it doesn't exist */
+    err = fstatat(0, dest, &sb, 0);
+    if (err && errno == ENOENT) {
+        LOG_INF("Creating %s '%s'", dir_name, dest);
+        err = mkdir(dest, 0700);
+    }
+
+    if (err) {
+        LOG_ERR("Error with %s.", dir_name);
+        return -1;
+    }
+
+    return 0;
+}
+
+static inline void setup_initial_state(struct state *state)
+{
+    int err;
 
     state->shells.compare_func = compare_shell_pid;
     state->shells.cleanup_func = cleanup_shell;
@@ -87,41 +142,29 @@ static inline void setup_initial_state(struct state *state, char *rootdir)
     }
     LOG_INF("User is %s", state->uname);
 
-    if (rootdir == NULL) {
-        /* Use the default root directory */
-        err = snprintf(state->rootdir, 64, "/home/%s/.nav", state->uname);
-        if (err >= 108 || err <= 0) {
-            LOG_ERR("Unable to set root directory.");
-            exit(EXIT_FAILURE);
-        }
-    } else {
-        /* Use the specified root directory */
-        err = snprintf(state->rootdir, 108, "%s", rootdir);
-        if (err >= 108 || err <= 0) {
-            LOG_ERR("Unable to set root directory.");
-            exit(EXIT_FAILURE);
-        }
-    }
-
-    err = fstatat(0, state->rootdir, &sb, 0);
-    if (err && errno == ENOENT) {
-        LOG_INF("Creating root dir '%s'", state->rootdir);
-        err = mkdir(state->rootdir, 0700);
-    }
-
-    if (err) {
-        LOG_ERR("Error with root dir.");
+    /* Setup config directory */
+    if (setup_directory(state->config_dir, sizeof(state->config_dir),
+                        CONFIG_DIR_ENV_VAR, DEFAULT_CONFIG_DIR, state->uname,
+                        "config dir") != 0) {
         exit(EXIT_FAILURE);
     }
-    LOG_INF("Root dir is %s", state->rootdir);
 
-    err = snprintf(state->nav_path, 108, "%s/nav.sock", state->rootdir);
-    if (err >= 108 || err <= 0) {
+    /* Setup cache directory */
+    if (setup_directory(state->cache_dir, sizeof(state->cache_dir),
+                        CACHE_DIR_ENV_VAR, DEFAULT_CACHE_DIR, state->uname,
+                        "cache dir") != 0) {
+        exit(EXIT_FAILURE);
+    }
+
+    err = snprintf(state->nav_socket_path, sizeof(state->nav_socket_path),
+                   "%s/" DEFAULT_SOCKET_FILE, state->cache_dir);
+    if (err >= SOCKADDR_PATH_MAX || err <= 0) {
         LOG_ERR("Cannot get nav socket path.");
         exit(EXIT_FAILURE);
     }
 
-    sprintf(state->tagfile_path, "%s/tags", state->rootdir);
+    snprintf(state->tagfile_path, sizeof(state->tagfile_path),
+             "%s/" DEFAULT_TAG_FILE, state->config_dir);
     read_tag_file(&state->tags, state->tagfile_path);
 }
 
@@ -146,32 +189,30 @@ static void setup_socket(struct state *state)
     }
 
     /* Bind socket, setting default dest addr */
+    unlink(state->nav_socket_path);
     nav_addr.sun_family = AF_UNIX;
-    memcpy(nav_addr.sun_path, state->nav_path, 108);
+    memcpy(nav_addr.sun_path, state->nav_socket_path, SOCKADDR_PATH_MAX);
     err = bind(state->sfd, (struct sockaddr *)&nav_addr, sizeof(nav_addr));
     if (err == -1) {
         LOG_ERR("bind: %s", strerror(errno));
         exit(EXIT_FAILURE);
     }
+    LOG_INF("Socket created: %s", state->nav_socket_path);
 }
 
 void print_usage(const char *program_name)
 {
     printf("Usage: %s [options] <command> [arguments]\n", program_name);
     printf("Options:\n"
-           "  -d <directory>    Specify the directory to use.\n"
            "  -v                Print version.\n");
 }
 
-static void parse_args(int argc, char **argv, char **dir)
+static void parse_args(int argc, char **argv)
 {
     int opt;
 
-    while ((opt = getopt(argc, argv, "vd:")) != -1) {
+    while ((opt = getopt(argc, argv, "v")) != -1) {
         switch (opt) {
-        case 'd':
-            *dir = optarg;
-            break;
         case 'v':
             printf("nav daemon version 0\n");
             exit(EXIT_SUCCESS);
@@ -185,22 +226,21 @@ static void parse_args(int argc, char **argv, char **dir)
 int main(int argc, char **argv)
 {
     struct state *state;
-    char *rootdir = NULL;
 
-    parse_args(argc, argv, &rootdir);
+    parse_args(argc, argv);
 
     if (init_state()) {
         exit(EXIT_FAILURE);
     }
     state = get_state();
 
-    setup_initial_state(state, rootdir);
+    setup_initial_state(state);
     setup_socket(state);
     register_signal_handlers();
 
     loop(state);
 
-    unlink(state->nav_path);
+    unlink(state->nav_socket_path);
     close(state->sfd);
     deinit_state();
 
