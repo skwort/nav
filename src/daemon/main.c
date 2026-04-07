@@ -48,14 +48,15 @@ void handler(int signo, siginfo_t *info, void *context)
 void loop(struct state *state)
 {
     int nbytes = 0;
-    char buf[100] = {0};
+    char buf[256] = {0};
     char *line, *pid_str, *cmd_str, *args;
     char *saveptr;
     int pid;
 
     while (true) {
-        nbytes = recv(state->sfd, buf, 100, 0);
+        nbytes = recv(state->sfd, buf, sizeof(buf) - 1, 0);
         if (nbytes > 0) {
+            buf[nbytes] = '\0';
             line = buf;
             pid_str = strtok_r(line, " ", &saveptr);
             if (pid_str == NULL) {
