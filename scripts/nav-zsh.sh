@@ -47,14 +47,14 @@ function nav {
     case "$1" in
         add)
             # Command: nav add [tag] [path]
-            tag="$2"
-            path="$3"
-            if [ -z "$tag" ] || [ -z "$path" ]; then
+            local tag="$2"
+            local tag_path="${3:A}"
+            if [ -z "$tag" ] || [ -z "$tag_path" ]; then
                 _nav_usage
             else
-                output=$($NAV_CLIENT $$ add "$tag" "$path" 2> /dev/null)
+                output=$($NAV_CLIENT $$ add "$tag" "$tag_path" 2> /dev/null)
                 if [ "$output" = "OK" ]; then
-                    echo "Added tag '$tag' with path '$path'"
+                    echo "Added tag '$tag' with path '$tag_path'"
                 else
                     _nav_error "Failed to add tag '$tag'"
                 fi
@@ -62,7 +62,7 @@ function nav {
             ;;
         delete)
             # Command: nav delete [tag]
-            tag="$2"
+            local tag="$2"
             if [ -z "$tag" ]; then
                 _nav_usage
             else
