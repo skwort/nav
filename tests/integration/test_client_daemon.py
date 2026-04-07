@@ -376,6 +376,60 @@ def test_action_reset(daemon):
     assert client.stdout.strip() == "OK"
 
 
+def test_add_short_after_long_message(daemon):
+    """
+    Regression test for stale recv buffer data causing spurious "Too many tokens"
+    errors in cmd_add.
+
+    Discovered in the wild: after adding a tag with a long path, subsequent
+    shorter add commands would silently fail. The daemon logs showed
+    [ERROR]: Too many tokens, but no change had been made to the add logic.
+
+    Root cause: the daemon recv loop uses a 256-byte buffer that is not
+    null-terminated after each recv. Residual bytes from a longer message bleed
+    into the strtok parsing of a subsequent shorter message, producing a phantom
+    third token and causing cmd_add to return BAD.
+
+    This test deterministically reproduces the sequence:
+
+    Long message:  "123456 add " + "a"*34 + " /tmp/ "  = 52 bytes
+    Short message: "123456 add short /tmp/ "             = 23 bytes
+
+    After the short recv, buf[23..51] still holds bytes from the long message
+    ("a"*22 + " /tmp/ "). strtok sees three tokens in args instead of two.
+    """
+    pid = "123456"
+
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "register"], capture_output=True, text=True, env=ENV
+    )
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # Long add: fills buf[0..51]
+    long_tag = "a" * 34
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "add", long_tag, "/tmp/"],
+        capture_output=True, text=True, env=ENV,
+    )
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    # Short add: fills buf[0..22], buf[23..51] retains residual → "Too many tokens"
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "add", "short", "/tmp/"],
+        capture_output=True, text=True, env=ENV,
+    )
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+    client = subprocess.run(
+        [CLIENT_PATH, pid, "unregister"], capture_output=True, text=True, env=ENV
+    )
+    assert client.returncode == 0
+    assert client.stdout.strip() == "OK"
+
+
 def test_tags_list(daemon):
     """
     Test listing tags.
