@@ -14,7 +14,7 @@ function _nav_usage {
     echo "  [tag]             Navigate to the specified tag."
     echo "  add [tag] [path]  Add a new tag-path association."
     echo "  delete [tag]      Remove the specified tag."
-    echo "  show|s            Show all tag-path associations."
+    echo "  show|s|list|l     Show all tag-path associations."
     echo "  back|b            Undo the previous action."
     echo "  actions|a         List all recorded actions."
     echo "  reset|ar          Delete all recorded actions."
@@ -73,7 +73,7 @@ function nav {
                 fi
             fi
             ;;
-        show|s)
+        show|s|list|l)
             # Command: nav show
             output=$($NAV_CLIENT $$ show 2> /dev/null)
             if [ "$output" != "BAD" ]; then
