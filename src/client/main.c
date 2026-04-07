@@ -95,6 +95,7 @@ void setup_socket(char *pid)
     my_addr.sun_family = AF_UNIX;
     snprintf(my_addr.sun_path, 108, "%s/%s.sock", cache_dir, pid);
 
+    unlink(my_addr.sun_path);
     err = bind(sfd, (struct sockaddr *)&my_addr, sizeof(my_addr));
     if (err == -1) {
         LOG_ERR("bind: %s", strerror(errno));
