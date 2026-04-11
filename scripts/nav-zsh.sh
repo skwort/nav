@@ -140,7 +140,7 @@ function _nav_completion {
     cmd_options=(show back add delete actions reset)
 
     # Get tags (without registering, just try to get the list)
-    tag_options=(${(f)"$($NAV_CLIENT $$ list 2> /dev/null)"})
+    tag_options=(${(s: :)"$($NAV_CLIENT $$ list 2> /dev/null)"})
 
     case "$words[2]" in
         delete)
